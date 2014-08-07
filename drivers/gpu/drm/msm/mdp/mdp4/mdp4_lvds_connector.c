@@ -134,7 +134,7 @@ struct drm_connector *mdp4_lvds_connector_init(struct drm_device *dev,
 	connector->interlace_allowed = 0;
 	connector->doublescan_allowed = 0;
 
-	drm_sysfs_connector_add(connector);
+	drm_connector_register(connector);
 
 	drm_mode_connector_attach_encoder(connector, encoder);
 
