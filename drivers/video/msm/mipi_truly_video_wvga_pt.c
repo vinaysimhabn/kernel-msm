@@ -20,18 +20,24 @@ static struct msm_panel_info pinfo;
 static struct mipi_dsi_phy_ctrl dsi_video_mode_phy_db = {
 	/* DSI Bit Clock at 500 MHz, 2 lane, RGB888 */
 	/* regulator */
-	{0x03, 0x01, 0x01, 0x00},
+	{0x03, 0x0a, 0x04, 0x00, 0x20},
 	/* timing   */
-	{0xb9, 0x8e, 0x1f, 0x00, 0x98, 0x9c, 0x22, 0x90,
-	0x18, 0x03, 0x04},
+	{0x67, 0x16, 0x0e, 0x00, 0x38, 0x3c, 0x12, 0x19,
+		0x18, 0x03, 0x04, 0xa0},  //Pamn suggest
+	//	{0x67, 0x16, 0x3E, 0x00, 0x38, 0x3c, 0x12, 0x19,
+	//	0x18, 0x03, 0x04, 0xa0}, // pamn2
+
+
 	/* phy ctrl */
-	{0x7f, 0x00, 0x00, 0x00},
+	{0x5f, 0x00, 0x00, 0x10},
 	/* strength */
-	{0xbb, 0x02, 0x06, 0x00},
+	{0xff, 0x00, 0x06, 0x00},
 	/* pll control */
-	{0x00, 0xec, 0x31, 0xd2, 0x00, 0x40, 0x37, 0x62,
-	0x01, 0x0f, 0x07,
-	0x05, 0x14, 0x03, 0x0, 0x0, 0x0, 0x20, 0x0, 0x02, 0x0},
+	{0x00, 0x46, 0x30, 0xc4, 0x4a, 0x01, 0x19,/*0x00, 0x20, 0x08,*/ 0x62,
+		0x71, 0x0f, 0x01,
+		0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01},
+	//        { 0x0, 0x58, 0x30, 0xC6, 0x0, 0x20, 0xC, 0x62, 0x71, 0x88, 0x99, 0x0, 0x14, 0x3, 0x0,0x2,0x0,0x20,0x0,0x1},
+
 };
 
 static int __init mipi_video_truly_wvga_pt_init(void)
@@ -42,62 +48,51 @@ static int __init mipi_video_truly_wvga_pt_init(void)
 		return 0;
 
 	pinfo.xres = 480;
-	pinfo.yres = 800;
+	pinfo.yres = 864;
 	pinfo.type = MIPI_VIDEO_PANEL;
 	pinfo.pdest = DISPLAY_1;
 	pinfo.wait_cycle = 0;
 	pinfo.bpp = 24;
-	pinfo.lcdc.h_back_porch = 100;
-	pinfo.lcdc.h_front_porch = 100;
-	pinfo.lcdc.h_pulse_width = 8;
-	pinfo.lcdc.v_back_porch = 20;
-	pinfo.lcdc.v_front_porch = 20;
+	pinfo.lcdc.h_back_porch = 44;
+	pinfo.lcdc.h_front_porch = 46;
+	pinfo.lcdc.h_pulse_width = 4;
+	pinfo.lcdc.v_back_porch = 16;
+	pinfo.lcdc.v_front_porch = 15;
 	pinfo.lcdc.v_pulse_width = 1;
 	pinfo.lcdc.border_clr = 0;	/* blk */
 	pinfo.lcdc.underflow_clr = 0xff;	/* blue */
 	/* number of dot_clk cycles HSYNC active edge
 	   is delayed from VSYNC active edge */
 	pinfo.lcdc.hsync_skew = 0;
-	pinfo.clk_rate = 499000000;
+	pinfo.clk_rate = 343000000;
 	pinfo.bl_max = 15;
 	pinfo.bl_min = 1;
 	pinfo.fb_num = 2;
-
 	pinfo.mipi.mode = DSI_VIDEO_MODE;
-	pinfo.mipi.pulse_mode_hsa_he = TRUE; /* send HSA and HE following
-						VS/VE packet */
-	pinfo.mipi.hfp_power_stop = TRUE; /* LP-11 during the HFP period */
-	pinfo.mipi.hbp_power_stop = TRUE; /* LP-11 during the HBP period */
-	pinfo.mipi.hsa_power_stop = TRUE; /* LP-11 during the HSA period */
-	/* LP-11 or let Command Mode Engine send packets in
-	HS or LP mode for the BLLP of the last line of a frame */
+	pinfo.mipi.pulse_mode_hsa_he = TRUE;
+	pinfo.mipi.hfp_power_stop = TRUE;
+	pinfo.mipi.hbp_power_stop = TRUE;
+	pinfo.mipi.hsa_power_stop = FALSE;
 	pinfo.mipi.eof_bllp_power_stop = TRUE;
-	/* LP-11 or let Command Mode Engine send packets in
-	HS or LP mode for packets sent during BLLP period */
 	pinfo.mipi.bllp_power_stop = TRUE;
-
-	pinfo.mipi.traffic_mode = DSI_BURST_MODE;
-	pinfo.mipi.dst_format =  DSI_VIDEO_DST_FORMAT_RGB888;
+	pinfo.mipi.traffic_mode = DSI_NON_BURST_SYNCH_EVENT;
+	pinfo.mipi.dst_format = DSI_VIDEO_DST_FORMAT_RGB888;
 	pinfo.mipi.vc = 0;
-	pinfo.mipi.rgb_swap = DSI_RGB_SWAP_RGB; /* RGB */
+	pinfo.mipi.rgb_swap = DSI_RGB_SWAP_RGB;
 	pinfo.mipi.data_lane0 = TRUE;
 	pinfo.mipi.data_lane1 = TRUE;
-
-	pinfo.mipi.t_clk_post = 0x20;
-	pinfo.mipi.t_clk_pre = 0x2f;
-
+	pinfo.mipi.t_clk_post = 0x04;
+	pinfo.mipi.t_clk_pre = 0x1c;
 	pinfo.mipi.stream = 0; /* dma_p */
-	pinfo.mipi.mdp_trigger = DSI_CMD_TRIGGER_NONE;
+	pinfo.mipi.mdp_trigger = 0;
 	pinfo.mipi.dma_trigger = DSI_CMD_TRIGGER_SW;
-	pinfo.mipi.frame_rate = 60; /* FIXME */
-
+	pinfo.mipi.frame_rate = 60;
 	pinfo.mipi.dsi_phy_db = &dsi_video_mode_phy_db;
-	pinfo.mipi.dlane_swap = 0x01;
-	pinfo.mipi.tx_eot_append = 0x01; /* append EOT at the end
-					    of data burst */
+	pinfo.mipi.tx_eot_append = TRUE;
+	pinfo.mipi.esc_byte_ratio = 4;
 
 	ret = mipi_truly_device_register(&pinfo, MIPI_DSI_PRIM,
-						MIPI_DSI_PANEL_WVGA_PT);
+			MIPI_DSI_PANEL_WVGA_PT);
 
 	if (ret)
 		pr_err("%s: failed to register device!\n", __func__);

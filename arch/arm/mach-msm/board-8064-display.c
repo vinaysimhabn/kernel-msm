@@ -112,6 +112,7 @@ static struct resource msm_fb_resources[] = {
 	}
 };
 
+#define MIPI_VIDEO_TRULY_WVGA_PANEL_NAME "mipi_video_truly_wvga"
 #define LVDS_CHIMEI_PANEL_NAME "lvds_chimei_wxga"
 #define LVDS_FRC_PANEL_NAME "lvds_frc_fhd"
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME "mipi_video_toshiba_wsvga"
@@ -166,8 +167,12 @@ static int msm_fb_detect_panel(const char *name)
 				PANEL_NAME_MAX_LEN)))
 			return 0;
 	} else if (machine_is_apq8064_cdp()) {
-		if (!strncmp(name, LVDS_CHIMEI_PANEL_NAME,
+	/*	if (!strncmp(name, LVDS_CHIMEI_PANEL_NAME,
 			strnlen(LVDS_CHIMEI_PANEL_NAME,
+				PANEL_NAME_MAX_LEN)))
+	*/
+	if (!strncmp(name, MIPI_VIDEO_TRULY_WVGA_PANEL_NAME,
+			strnlen(MIPI_VIDEO_TRULY_WVGA_PANEL_NAME,
 				PANEL_NAME_MAX_LEN)))
 			return 0;
 	} else if (machine_is_mpq8064_dtv()) {
@@ -398,6 +403,189 @@ static struct platform_device wfd_device = {
 #define HDMI_HPD_GPIO		72
 
 static bool dsi_power_on;
+/* The case of truly display only call the below function */
+#ifdef CONFIG_FB_MSM_MIPI_PANEL_DETECT
+static int mipi_dsi_panel_power(int on)
+{
+	static struct regulator *reg_l23, *reg_l16,*reg_l8, *reg_ext_3p3v;
+	static int  gpio36, gpio26, mpp3, mpp2;
+	int rc;
+
+	pr_debug("%s: on=%d\n", __func__, on);
+
+	if (!dsi_power_on) {
+		reg_l23 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi1_vddio");
+		if (IS_ERR_OR_NULL(reg_l23)) {
+			pr_err("could not get 8921_l23, rc = %ld\n",
+				PTR_ERR(reg_l23));
+			return -ENODEV;
+		}
+
+		reg_l16 = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi1_pll_vdda");
+		if (IS_ERR_OR_NULL(reg_l16)) {
+			pr_err("could not get 8921_l16, rc = %ld\n",
+				PTR_ERR(reg_l16));
+			return -ENODEV;
+		}
+
+		rc = regulator_set_voltage(reg_l16, 2800000, 2800000);
+		if (rc) {
+			pr_err("set_voltage l16 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+
+		reg_l8 = regulator_get(&msm_mipi_dsi1_device.dev,
+						"dsi1_avdd");
+		if (IS_ERR(reg_l8)) {
+				pr_err("could not get 8921_l8, rc = %ld\n",
+						PTR_ERR(reg_l8));
+				return -ENODEV;
+		}
+		rc = regulator_set_voltage(reg_l8, 3300000, 3300000);
+		if (rc) {
+				pr_err("set_voltage l8 failed, rc=%d\n", rc);
+				return -EINVAL;
+		}
+
+		if (machine_is_apq8064_liquid()) {
+			reg_ext_3p3v = regulator_get(&msm_mipi_dsi1_device.dev,
+				"dsi1_vccs_3p3v");
+			if (IS_ERR_OR_NULL(reg_ext_3p3v)) {
+				pr_err("could not get reg_ext_3p3v, rc = %ld\n",
+					PTR_ERR(reg_ext_3p3v));
+				reg_ext_3p3v = NULL;
+				return -ENODEV;
+			}
+			mpp3 = PM8921_MPP_PM_TO_SYS(3);
+			rc = gpio_request(mpp3, "backlight_en");
+			if (rc) {
+				pr_err("request mpp3 failed, rc=%d\n", rc);
+				return -ENODEV;
+			}
+		}
+
+		gpio36 = PM8921_GPIO_PM_TO_SYS(36); /* lcd1_pwr_en_n */
+                rc = gpio_request(gpio36, "lcd1_pwr_en_n");
+                if (rc) {
+                        pr_err("request gpio 36 failed, rc=%d\n", rc);
+                        return -ENODEV;
+                }
+
+		gpio_set_value_cansleep(gpio36, 0);
+
+
+		mpp2 = PM8821_MPP_PM_TO_SYS(2);
+		rc = gpio_request(mpp2, "disp_rst_n");
+		if (rc) {
+			pr_err("request MPP 2 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		gpio26 = PM8921_GPIO_PM_TO_SYS(26);
+		rc = gpio_request(gpio26, "pwm_backlight_ctrl");
+		if (rc) {
+			pr_err("request gpio 26 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+
+		dsi_power_on = true;
+	}
+
+	if (on) {
+
+             pr_err(" MIPI DSI: inside on board-8064-display.c \n");
+		rc = regulator_enable(reg_l23);
+		if (rc) {
+			pr_err("enable lvs7 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_set_optimum_mode(reg_l8, 110000);
+		if (rc < 0) {
+			pr_err("set_optimum_mode l8 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+		rc = regulator_enable(reg_l8);
+		if (rc) {
+			pr_err("enable l8 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_set_optimum_mode(reg_l16, 100000);
+		if (rc < 0) {
+			pr_err("set_optimum_mode l16 failed, rc=%d\n", rc);
+			return -EINVAL;
+		}
+		rc = regulator_enable(reg_l16);
+		if (rc) {
+			pr_err("enable l16 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		if (machine_is_apq8064_liquid()) {
+			rc = regulator_enable(reg_ext_3p3v);
+			if (rc) {
+				pr_err("enable reg_ext_3p3v failed, rc=%d\n",
+					rc);
+				return -ENODEV;
+			}
+			gpio_set_value_cansleep(mpp3, 1);
+		}
+		gpio_set_value_cansleep(gpio26, 1);
+
+		gpio_set_value_cansleep(mpp2, 1);
+		mdelay(1);
+		gpio_set_value_cansleep(mpp2, 0);
+		usleep(50);
+		gpio_set_value_cansleep(mpp2, 1);
+
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 1);
+	} else {
+
+		pr_err(" MIPI DSI inside else board-8064-display.c \n");
+		if (socinfo_get_pmic_model() == PMIC_MODEL_PM8917)
+			gpio_set_value_cansleep(gpio26, 0);
+		gpio_set_value_cansleep(mpp2, 0);
+
+		if (machine_is_apq8064_liquid()) {
+			gpio_set_value_cansleep(mpp3, 0);
+
+			rc = regulator_disable(reg_ext_3p3v);
+			if (rc) {
+				pr_err("disable reg_ext_3p3v failed, rc=%d\n",
+					rc);
+				return -ENODEV;
+			}
+		}
+
+		rc = regulator_disable(reg_l8);
+		if (rc) {
+			pr_err("disable reg_l8 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_disable(reg_l23);
+		if (rc) {
+			pr_err("disable reg_lv23 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+		rc = regulator_disable(reg_l16);
+		if (rc) {
+			pr_err("disable reg_l16 failed, rc=%d\n", rc);
+			return -ENODEV;
+		}
+
+	}
+
+	return 0;
+}
+/* This is the default code used for LVDS lvds_chimei_wxga DISPLAY */
+#else
 static int mipi_dsi_panel_power(int on)
 {
 	static struct regulator *reg_lvs7, *reg_l2, *reg_l11, *reg_ext_3p3v;
@@ -563,6 +751,7 @@ static int mipi_dsi_panel_power(int on)
 
 	return 0;
 }
+#endif
 
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.dsi_power_save = mipi_dsi_panel_power,
