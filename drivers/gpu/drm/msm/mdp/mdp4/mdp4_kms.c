@@ -212,7 +212,8 @@ static struct drm_panel *detect_panel(struct drm_device *dev, const char *name)
 static struct drm_panel *detect_panel(struct drm_device *dev, const char *name)
 {
 	/* TODO get panel name from module param? */
-	const char *panelname = "optronics,b101xtn01";
+	//const char *panelname = "optronics,b101xtn01";
+	const char *panelname = "truly,fwvga0402g90001";
 	return panel_simple_register(dev->dev, panelname);
 }
 #endif
@@ -253,7 +254,8 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	panel = detect_panel(dev, "qcom,lvds-panel");
 	if (IS_ERR(panel)) {
 		ret = PTR_ERR(panel);
-		dev_err(dev->dev, "failed to detect LVDS panel: %d\n", ret);
+		//dev_err(dev->dev, "failed to detect LVDS panel: %d\n", ret);
+		dev_err(dev->dev, "failed to detect DSI panel: %d\n", ret);
 		goto fail;
 	}
 
@@ -271,9 +273,11 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		goto fail;
 	}
 
-	encoder = mdp4_lcdc_encoder_init(dev, panel);
+	//encoder = mdp4_lcdc_encoder_init(dev, panel);
+	encoder = mdp4_dsi_encoder_init(dev, panel);
 	if (IS_ERR(encoder)) {
-		dev_err(dev->dev, "failed to construct LCDC encoder\n");
+		//dev_err(dev->dev, "failed to construct LCDC encoder\n");
+		dev_err(dev->dev, "failed to construct DSI encoder\n");
 		ret = PTR_ERR(encoder);
 		goto fail;
 	}
@@ -284,7 +288,8 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	priv->crtcs[priv->num_crtcs++] = crtc;
 	priv->encoders[priv->num_encoders++] = encoder;
 
-	connector = mdp4_lvds_connector_init(dev, panel, encoder);
+	//connector = mdp4_lvds_connector_init(dev, panel, encoder);
+	connector = mdp4_dsi_connector_init(dev, panel, encoder);
 	if (IS_ERR(connector)) {
 		ret = PTR_ERR(connector);
 		dev_err(dev->dev, "failed to initialize LVDS connector: %d\n", ret);

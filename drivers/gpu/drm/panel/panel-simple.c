@@ -150,7 +150,7 @@ static int panel_simple_get_modes(struct drm_panel *panel)
 	int num = 0;
 
 	p->base.connector->status = connector_status_disconnected;
-	p->ddc = i2c_get_adapter(3); // ifc6410-gsbi3, lvds ddc is connected to i2c3
+	//p->ddc = i2c_get_adapter(3); // ifc6410-gsbi3, lvds ddc is connected to i2c3
 
 	/* probe EDID if a DDC bus is available */
 	if (p->ddc) {
@@ -163,7 +163,8 @@ static int panel_simple_get_modes(struct drm_panel *panel)
 		}
 	}
 	/* add hard-coded panel modes */
-//	num += panel_simple_get_fixed_modes(p);// Hardcoded value is removed, since we are using the ddc read for lvds
+	p->base.connector->status = connector_status_connected;
+	num += panel_simple_get_fixed_modes(p);// Hardcoded value is removed, since we are using the ddc read for lvds
 
 	return num;
 }
@@ -478,6 +479,29 @@ static const struct panel_desc optronics_lvds = {
 	},
 };
 
+static const struct drm_display_mode truly_dsi_mode = {
+        .clock = 34300,
+        .hdisplay = 480,
+        .hsync_start = 480 + 46,
+        .hsync_end = 480 + 46 + 4,
+        .htotal = 480 + 46 + 4,
+        .vdisplay = 864,
+        .vsync_start = 864 + 15,
+        .vsync_end = 864 + 15 + 1,
+        .vtotal = 864 + 15 + 1,
+        .vrefresh = 60,
+        .flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
+};
+
+static const struct panel_desc truly_dsi = {
+        .modes = &truly_dsi_mode,
+        .num_modes = 1,
+        .size = {
+                .width = 480,
+                .height = 864,
+        },
+};
+
 static const struct of_device_id platform_of_match[] = {
 	{
 		.compatible = "auo,b101aw03",
@@ -510,6 +534,8 @@ static const struct of_device_id platform_of_match[] = {
 		.compatible = "optronics,b101xtn01",
 		.data = &optronics_lvds,
 	}, {
+		.compatible = "truly,fwvga0402g90001",
+		.data = &truly_dsi,
 	}, {
 		.compatible = "simple-panel",
 	}, {
