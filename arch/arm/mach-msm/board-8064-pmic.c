@@ -213,6 +213,8 @@ static struct pm8xxx_mpp_init pm8xxx_mpps[] __initdata = {
 	PM8921_MPP_INIT(9, D_INPUT, PM8921_MPP_DIG_LEVEL_S4, DIN_TO_INT),
 	/* PCIE_RESET_N */
 	PM8921_MPP_INIT(1, D_OUTPUT, PM8921_MPP_DIG_LEVEL_VPH, DOUT_CTRL_HIGH),
+	/* DISP_RST on ifc 6440 */
+	PM8921_MPP_INIT(2, D_OUTPUT, PM8921_MPP_DIG_LEVEL_S4, DOUT_CTRL_LOW),
 };
 
 static struct pm8xxx_gpio_init pm8921_sglte2_gpios[] __initdata = {
