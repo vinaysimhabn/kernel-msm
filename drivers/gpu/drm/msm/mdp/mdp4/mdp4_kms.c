@@ -225,7 +225,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	struct drm_plane *plane;
 	struct drm_crtc *crtc;
 	struct drm_encoder *encoder;
-	struct drm_connector *connector;
+//	struct drm_connector *connector;
 	struct drm_panel *panel;
 	struct hdmi *hdmi;
 	int ret;
@@ -289,14 +289,22 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	priv->encoders[priv->num_encoders++] = encoder;
 
 	//connector = mdp4_lvds_connector_init(dev, panel, encoder);
-	connector = mdp4_dsi_connector_init(dev, panel, encoder);
+/*	connector = mdp4_dsi_connector_init(dev, panel, encoder);
 	if (IS_ERR(connector)) {
 		ret = PTR_ERR(connector);
-		dev_err(dev->dev, "failed to initialize LVDS connector: %d\n", ret);
+		dev_err(dev->dev, "failed to initialize DSI connector: %d\n", ret);
 		goto fail;
 	}
+*/
+	  /* Create DSI connector/bridge: */
+        ret = dsi_init(dev, encoder);
+        if (ret) {
+                dev_err(dev->dev, "failed to initialize DSI\n");
+                goto fail;
+        }
 
-	priv->connectors[priv->num_connectors++] = connector;
+
+//	priv->connectors[priv->num_connectors++] = connector;
 
 	/*
 	 * Setup DTV/HDMI path: RGB1 -> DMA_E -> DTV -> HDMI:

@@ -8,6 +8,13 @@ obj-y += pwm_bl.o
 msm-y := \
 	adreno/adreno_gpu.o \
 	adreno/a3xx_gpu.o \
+	dsi/dsi.o \
+        dsi/dsi_bridge.o \
+        dsi/dsi_clk.o \
+        dsi/dsi_connector.o \
+        dsi/dsi_mipi.o \
+        dsi/dsi_phy_8960.o \
+        dsi/dsi_phy_8x60.o \
 	hdmi/hdmi.o \
 	hdmi/hdmi_audio.o \
 	hdmi/hdmi_bridge.o \
@@ -29,6 +36,8 @@ msm-y := \
 	mdp/mdp4/mdp4_irq.o \
 	mdp/mdp4/mdp4_kms.o \
 	mdp/mdp4/mdp4_plane.o \
+	panel/panel.o \
+        panel/panel_lgit.o \
 	mdp/mdp5/mdp5_crtc.o \
 	mdp/mdp5/mdp5_encoder.o \
 	mdp/mdp5/mdp5_irq.o \

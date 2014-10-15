@@ -46,23 +46,20 @@ static struct mdp4_kms *get_kms(struct drm_encoder *encoder)
 /* not ironically named at all.. no, really.. */
 static void bs_init(struct mdp4_dsi_encoder *mdp4_dsi_encoder)
 {
-//	struct drm_device *dev = mdp4_dsi_encoder->base.dev;
-	struct mipi_dsi_platform_data *dsi_pdata = mdp4_find_pdata("mipi_dsi.0");
+	struct drm_device *dev = mdp4_dsi_encoder->base.dev;
+	struct msm_panel_common_pdata *dsi_pdata = mdp4_find_pdata("mipi_dsi.1");
 
 	if (!dsi_pdata) {
-	//	dev_err(dev->dev, "could not find mipi_dsi pdata\n");
-//		return;
+		dev_err(dev->dev, "could not find mipi_dsi pdata\n");
+		return;
 	}
-/*
-	if (dsi_pdata->bus_scale_table) {
+
+	if (dsi_pdata->mdp_bus_scale_table) {
 		mdp4_dsi_encoder->bsc = msm_bus_scale_register_client(
-				dsi_pdata->bus_scale_table);
+				dsi_pdata->mdp_bus_scale_table);
 		DBG("bus scale client: %08x", mdp4_dsi_encoder->bsc);
-		DBG("dsi_power_save: %p", dsi_pdata->lcdc_power_save);
-		if (dsi_pdata->dsi_power_save)
-			dsi_pdata->dsi_power_save(1);
 	}
-*/
+
 }
 
 static void bs_fini(struct mdp4_dsi_encoder *mdp4_dsi_encoder)
@@ -100,12 +97,12 @@ static const struct drm_encoder_funcs mdp4_dsi_encoder_funcs = {
 
 static void mdp4_dsi_encoder_dpms(struct drm_encoder *encoder, int mode)
 {
-	struct drm_device *dev = encoder->dev;
+	//struct drm_device *dev = encoder->dev;
 	struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
 	struct mdp4_kms *mdp4_kms = get_kms(encoder);
 	struct drm_panel *panel = mdp4_dsi_encoder->panel;
 	bool enabled = (mode == DRM_MODE_DPMS_ON);
-	int i;
+//	int i;
 
 	DBG("mode=%d", mode);
 
@@ -114,16 +111,16 @@ static void mdp4_dsi_encoder_dpms(struct drm_encoder *encoder, int mode)
 
 	if (enabled) {
 		unsigned long pc = mdp4_dsi_encoder->pixclock;
-		int ret;
+		//int ret;
 
-		bs_set(mdp4_dsi_encoder, 1);
-
+		bs_set(mdp4_dsi_encoder, 2);
+/*
 		 for (i = 0; i < ARRAY_SIZE(mdp4_dsi_encoder->regs); i++) {
                         ret = regulator_enable(mdp4_dsi_encoder->regs[i]);
                         if (ret)
                                 dev_err(dev->dev, "failed to enable regulator: %d\n", ret);
                 }
-
+*/
 		DBG("setting mdp_p_clk=%lu", pc);
 /*
 		ret = clk_set_rate(mdp4_dsi_encoder->mdp_p_clk, pc);
@@ -243,12 +240,16 @@ static void mdp4_dsi_encoder_prepare(struct drm_encoder *encoder)
 
 static void mdp4_dsi_encoder_commit(struct drm_encoder *encoder)
 {
-	mdp4_crtc_set_config(encoder->crtc,
-			MDP4_DMA_CONFIG_R_BPC(BPC8) |
-			MDP4_DMA_CONFIG_G_BPC(BPC8) |
-			MDP4_DMA_CONFIG_B_BPC(BPC8) |
-			MDP4_DMA_CONFIG_PACK(0x21));
-	mdp4_crtc_set_intf(encoder->crtc, INTF_DSI_CMD, 1);
+	 mdp4_crtc_set_config(encoder->crtc,
+                        MDP4_DMA_CONFIG_PACK_ALIGN_MSB |
+                        MDP4_DMA_CONFIG_DEFLKR_EN |
+                        MDP4_DMA_CONFIG_DITHER_EN |
+                        MDP4_DMA_CONFIG_R_BPC(BPC8) |
+                        MDP4_DMA_CONFIG_G_BPC(BPC8) |
+                        MDP4_DMA_CONFIG_B_BPC(BPC8) |
+                        MDP4_DMA_CONFIG_PACK(0x21));
+        mdp4_crtc_set_intf(encoder->crtc, INTF_DSI_VIDEO,1);
+
 	mdp4_dsi_encoder_dpms(encoder, DRM_MODE_DPMS_ON);
 }
 
@@ -273,7 +274,7 @@ struct drm_encoder *mdp4_dsi_encoder_init(struct drm_device *dev,
 	struct drm_encoder *encoder = NULL;
 	struct mdp4_dsi_encoder *mdp4_dsi_encoder;
 	int ret;
-        struct regulator *reg;
+        //struct regulator *reg;
 
 	mdp4_dsi_encoder = kzalloc(sizeof(*mdp4_dsi_encoder), GFP_KERNEL);
 	if (!mdp4_dsi_encoder) {
@@ -321,7 +322,7 @@ struct drm_encoder *mdp4_dsi_encoder_init(struct drm_device *dev,
 
 */
 	 /* TODO: different regulators in other cases? */
-        reg = devm_regulator_get(dev->dev, "dsi1_avdd");
+/*        reg = devm_regulator_get(dev->dev, "dsi1_avdd");
         if (IS_ERR(reg)) {
                 ret = PTR_ERR(reg);
                 dev_err(dev->dev, "failed to get dsi1_avdd: %d\n", ret);
@@ -344,7 +345,7 @@ struct drm_encoder *mdp4_dsi_encoder_init(struct drm_device *dev,
                 goto fail;
         }
         mdp4_dsi_encoder->regs[2] = reg;
-
+*/
 
 
 	bs_init(mdp4_dsi_encoder);

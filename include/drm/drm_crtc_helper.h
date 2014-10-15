@@ -161,6 +161,20 @@ static inline void drm_connector_helper_add(struct drm_connector *connector,
 
 extern void drm_helper_resume_force_mode(struct drm_device *dev);
 
+struct drm_bridge_helper_funcs {
+        void (*dpms)(struct drm_bridge *bridge, int mode);
+        bool (*mode_fixup)(struct drm_bridge *bridge,
+                           const struct drm_display_mode *mode,
+                           struct drm_display_mode *adjusted_mode);
+        void (*disable)(struct drm_bridge *bridge);
+        void (*post_disable)(struct drm_bridge *bridge);
+        void (*mode_set)(struct drm_bridge *bridge,
+                         struct drm_display_mode *mode,
+                         struct drm_display_mode *adjusted_mode);
+        void (*pre_enable)(struct drm_bridge *bridge);
+        void (*enable)(struct drm_bridge *bridge);
+};
+
 /* drm_probe_helper.c */
 extern int drm_helper_probe_single_connector_modes(struct drm_connector
 						   *connector, uint32_t maxX,
