@@ -24,9 +24,9 @@
 struct panel_lgit {
 	struct panel base;
 	struct mipi_adapter *mipi;
-	struct regulator *reg_l8;
-	struct regulator *reg_l2;
-	struct regulator *reg_lvs6;
+	struct regulator *reg_l8_avdd;
+	struct regulator *reg_l12_pll_vdda;
+	struct regulator *reg_l8_vddio;
 	struct regulator *ext_dsv_load;
 	int gpio42;
 };
@@ -340,19 +340,19 @@ static int panel_lgit_power_on(struct panel *panel)
 		}
 	}
 
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l8, 110000);
+	ret = regulator_set_optimum_mode(panel_lgit->reg_l8_avdd, 110000);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to set l8 mode: %d\n", ret);
 		goto fail2;
 	}
 
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l2, 100000);
+	ret = regulator_set_optimum_mode(panel_lgit->reg_l12_pll_vdda, 100000);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to set l2 mode: %d\n", ret);
 		goto fail2;
 	}
 
-	ret = regulator_enable(panel_lgit->reg_l8);
+	ret = regulator_enable(panel_lgit->reg_l8_avdd);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable l8: %d\n", ret);
 		goto fail2;
@@ -360,7 +360,7 @@ static int panel_lgit_power_on(struct panel *panel)
 
 	udelay(100);
 
-	ret = regulator_enable(panel_lgit->reg_lvs6);
+	ret = regulator_enable(panel_lgit->reg_l8_vddio);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable lvs6: %d\n", ret);
 		goto fail3;
@@ -368,7 +368,7 @@ static int panel_lgit_power_on(struct panel *panel)
 
 	udelay(100);
 
-	ret = regulator_enable(panel_lgit->reg_l2);
+	ret = regulator_enable(panel_lgit->reg_l12_pll_vdda);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable l2: %d\n", ret);
 		goto fail4;
@@ -385,11 +385,11 @@ static int panel_lgit_power_on(struct panel *panel)
 	return 0;
 
 fail5:
-	regulator_disable(panel_lgit->reg_l2);
+	regulator_disable(panel_lgit->reg_l12_pll_vdda);
 fail4:
-	regulator_disable(panel_lgit->reg_lvs6);
+	regulator_disable(panel_lgit->reg_l8_vddio);
 fail3:
-	regulator_disable(panel_lgit->reg_l8);
+	regulator_disable(panel_lgit->reg_l8_avdd);
 fail2:
 	if (panel_lgit->ext_dsv_load)
 		regulator_disable(panel_lgit->ext_dsv_load);
@@ -406,27 +406,27 @@ static int panel_lgit_power_off(struct panel *panel)
 	toggle_lcd_reset(panel, 0);
 	udelay(100);
 
-	ret = regulator_disable(panel_lgit->reg_lvs6);
+	ret = regulator_disable(panel_lgit->reg_l8_vddio);
 	if (ret)
 		dev_err(dev->dev, "failed to disable lvs6: %d\n", ret);
 
 	udelay(100);
 
-	ret = regulator_disable(panel_lgit->reg_l8);
+	ret = regulator_disable(panel_lgit->reg_l8_avdd);
 	if (ret)
 		dev_err(dev->dev, "failed to disable l8: %d\n", ret);
 
 	udelay(100);
 
-	ret = regulator_disable(panel_lgit->reg_l2);
+	ret = regulator_disable(panel_lgit->reg_l12_pll_vdda);
 	if (ret)
 		dev_err(dev->dev, "failed to disable l2: %d\n", ret);
 
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l8, 100);
+	ret = regulator_set_optimum_mode(panel_lgit->reg_l8_avdd, 100);
 	if (ret < 0)
 		dev_err(dev->dev, "failed to set l8 mode: %d\n", ret);
 
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l2, 100);
+	ret = regulator_set_optimum_mode(panel_lgit->reg_l12_pll_vdda, 100);
 	if (ret < 0)
 		dev_err(dev->dev, "failed to set l2 mode: %d\n", ret);
 
@@ -800,33 +800,33 @@ struct panel *panel_lgit_init(struct drm_device *dev,
 	if (IS_ERR(panel_lgit->ext_dsv_load))
 		panel_lgit->ext_dsv_load = NULL;
 
-	panel_lgit->reg_l8 = devm_regulator_get(dev->dev, "dsi1_avdd");
-	if (IS_ERR(panel_lgit->reg_l8)) {
-		ret = PTR_ERR(panel_lgit->reg_l8);
+	panel_lgit->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
+	if (IS_ERR(panel_lgit->reg_l8_avdd)) {
+		ret = PTR_ERR(panel_lgit->reg_l8_avdd);
 		dev_err(dev->dev, "failed to request dsi_avdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_lgit->reg_lvs6 = devm_regulator_get(dev->dev, "dsi1_vddio");
-	if (IS_ERR(panel_lgit->reg_lvs6)) {
-		ret = PTR_ERR(panel_lgit->reg_lvs6);
+	panel_lgit->reg_l8_vddio = devm_regulator_get(dev->dev, "dsi1_vddio");
+	if (IS_ERR(panel_lgit->reg_l8_vddio)) {
+		ret = PTR_ERR(panel_lgit->reg_l8_vddio);
 		dev_err(dev->dev, "failed to request dsi_vddio regulator: %d\n", ret);
 		goto fail;
 	}
-	panel_lgit->reg_l2 = devm_regulator_get(dev->dev, "dsi1_pll_vdda");
-	if (IS_ERR(panel_lgit->reg_l2)) {
-		ret = PTR_ERR(panel_lgit->reg_l2);
+	panel_lgit->reg_l12_pll_vdda = devm_regulator_get(dev->dev, "dsi1_pll_vdda");
+	if (IS_ERR(panel_lgit->reg_l12_pll_vdda)) {
+		ret = PTR_ERR(panel_lgit->reg_l12_pll_vdda);
 		dev_err(dev->dev, "failed to request dsi_pll_vdda regulator: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_lgit->reg_l8,  3300000, 3300000);
+	ret = regulator_set_voltage(panel_lgit->reg_l8_avdd,  3300000, 3300000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l8 failed: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_lgit->reg_l2,  2800000, 2800000);
+	ret = regulator_set_voltage(panel_lgit->reg_l12_pll_vdda,  2800000, 2800000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l2 failed: %d\n", ret);
 		goto fail;
