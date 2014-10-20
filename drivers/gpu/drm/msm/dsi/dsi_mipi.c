@@ -146,7 +146,6 @@ static int dsi_mipi_set_panel_config(struct mipi_adapter *mipi,
 			DSI_CTRL_CLK_EN |
 			COND(pcfg->ecc_check, DSI_CTRL_ECC_CHECK) |
 			COND(pcfg->crc_check, DSI_CTRL_CRC_CHECK));
-
 	return 0;
 }
 
@@ -163,7 +162,9 @@ static int dsi_mipi_on(struct mipi_adapter *mipi)
 	phy->funcs->powerup(phy, 0/*dsi_bridge->pixclock*/);
 
 	ctrl = dsi_read(dsi, REG_DSI_CTRL);
-	dsi_write(dsi, REG_DSI_CTRL, ctrl | DSI_CTRL_ENABLE);
+//	dsi_write(dsi, REG_DSI_CTRL, ctrl | DSI_CTRL_ENABLE );
+
+	dsi_write(dsi, REG_DSI_CTRL, ctrl | DSI_CTRL_ENABLE | DSI_CTRL_VID_MODE_EN);
 	dsi_write(dsi, REG_DSI_INTR_CTRL,
 			DSI_IRQ_CMD_DMA_DONE | DSI_IRQ_MASK_CMD_DMA_DONE |
 			DSI_IRQ_ERROR | DSI_IRQ_MASK_ERROR);

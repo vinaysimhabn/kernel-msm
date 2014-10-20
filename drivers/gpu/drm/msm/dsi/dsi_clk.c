@@ -91,14 +91,16 @@ static void enable_clk(struct dsi *dsi, enum mmss_cc_clk clk,
 	/* TODO: this should eventually be hidden behind clk_set_rate().. */
 	if (desc->mnd_mode == 0) {
 		cc_write(dsi, REG_MMSS_CC_CLK_NS(clk),
-				MMSS_CC_CLK_NS_SRC(desc->src) |
-				MMSS_CC_CLK_NS_PRE_DIV_FUNC(desc->pre_div_func));
+				MMSS_CC_CLK_NS_SRC(3) |
+				/*MMSS_CC_CLK_NS_SRC(desc->src) |
+				MMSS_CC_CLK_NS_PRE_DIV_FUNC(desc->pre_div_func));*/
+				MMSS_CC_CLK_NS_PRE_DIV_FUNC(2));
 		cc_write(dsi, REG_MMSS_CC_CLK_CC(clk),
 				MMSS_CC_CLK_CC_CLK_EN |
 				MMSS_CC_CLK_CC_ROOT_EN |
 				MMSS_CC_CLK_CC_MND_MODE(desc->mnd_mode) |
 				MMSS_CC_CLK_CC_PMXO_SEL(0));
-	} else {
+	} else { 
 		cc_write(dsi, REG_MMSS_CC_CLK_MD(clk),
 				MMSS_CC_CLK_MD_D(~(2 * desc->d)) |
 				MMSS_CC_CLK_MD_M(desc->m));
