@@ -169,7 +169,7 @@ static int dsi_mipi_on(struct mipi_adapter *mipi)
 			DSI_IRQ_CMD_DMA_DONE | DSI_IRQ_MASK_CMD_DMA_DONE |
 			DSI_IRQ_ERROR | DSI_IRQ_MASK_ERROR);
 
-	phy->funcs->clk_enable(phy);
+	phy->funcs->phy_clk_enable(phy);
 
 	return 0;
 }
@@ -180,7 +180,7 @@ static int dsi_mipi_off(struct mipi_adapter *mipi)
 	struct dsi *dsi = dsi_mipi->dsi;
 	struct dsi_phy *phy = dsi->phy;
 
-	phy->funcs->clk_disable(phy);
+	phy->funcs->phy_clk_disable(phy);
 
 	dsi_write(dsi, REG_DSI_INTR_CTRL, 0);
 	dsi_write(dsi, REG_DSI_CTRL, 0);

@@ -122,8 +122,8 @@ struct dsi_phy_funcs {
 	void (*config)(struct dsi_phy *phy, const struct mipi_panel_config *pcfg);
 	void (*powerup)(struct dsi_phy *phy, unsigned long int pixclock);
 	void (*powerdown)(struct dsi_phy *phy);
-	void (*clk_enable)(struct dsi_phy *phy);
-	void (*clk_disable)(struct dsi_phy *phy);
+	void (*phy_clk_enable)(struct dsi_phy *phy);
+	void (*phy_clk_disable)(struct dsi_phy *phy);
 };
 
 struct dsi_phy {

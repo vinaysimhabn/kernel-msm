@@ -1,4 +1,4 @@
-ccflags-y := -Iinclude/drm -Idrivers/gpu/drm/msm
+ccflags-y := -Iinclude/drm -Idrivers/gpu/drm/msm -I$(src) -include reg_log.h
 ifeq (, $(findstring -W,$(EXTRA_CFLAGS)))
 	ccflags-y += -Werror
 endif
@@ -58,3 +58,4 @@ msm-y := \
 msm-$(CONFIG_DRM_MSM_FBDEV) += msm_fbdev.o
 
 obj-$(CONFIG_DRM_MSM)	+= msm.o
+

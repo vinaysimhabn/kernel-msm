@@ -170,8 +170,8 @@ static const struct dsi_phy_funcs dsi_phy_8x60_funcs = {
 		.config = dsi_phy_8x60_config,
 		.powerup = dsi_phy_8x60_powerup,
 		.powerdown = dsi_phy_8x60_powerdown,
-		.clk_enable = dsi_phy_8x60_clk_enable,
-		.clk_disable = dsi_phy_8x60_clk_disable,
+		.phy_clk_enable = dsi_phy_8x60_clk_enable,
+		.phy_clk_disable = dsi_phy_8x60_clk_disable,
 };
 
 struct dsi_phy *dsi_phy_8x60_init(struct dsi *dsi)
