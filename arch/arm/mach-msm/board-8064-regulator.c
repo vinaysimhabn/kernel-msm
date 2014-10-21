@@ -70,6 +70,7 @@ VREG_CONSUMERS(L8) = {
 	REGULATOR_SUPPLY("cam_vana",		"4-0020"),
 	REGULATOR_SUPPLY("dsi1_avdd",		"mdp.0"), /* MIPI DSI */
 	REGULATOR_SUPPLY("dsi1_vddio",		"mdp.0"), /* MIPI DSI */
+	REGULATOR_SUPPLY("ts_avdd",             "3-004a"),
 };
 VREG_CONSUMERS(L9) = {
 	REGULATOR_SUPPLY("8921_l9",		NULL),
