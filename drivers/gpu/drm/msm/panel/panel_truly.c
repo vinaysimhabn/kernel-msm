@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Red Hat
- * Author: Rob Clark <robdclark@gmail.com>
+ * Copyright (C) 2014 InforceComputing 
+ * Author: Vinay Simha BN <vinaysimha@inforcecomputing.com>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -14,11 +14,11 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <linux/gpio.h>
-#include <linux/mfd/pm8xxx/gpio.h>
-#include <linux/regulator/consumer.h>
+#include <linux/regulator/msm-gpio-regulator.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
+#include <linux/mfd/pm8xxx/pm8821.h>
+
 #include "panel.h"
 
 #define PM8921_GPIO_BASE                NR_GPIO_IRQS
@@ -30,96 +30,16 @@
 #define PM8821_MPP_BASE                 (PM8921_MPP_BASE + PM8921_NR_MPPS)
 #define PM8821_MPP_PM_TO_SYS(pm_mpp)    (pm_mpp - 1 + PM8821_MPP_BASE)
 
-struct panel_lgit {
+struct panel_truly {
 	struct panel base;
 	struct mipi_adapter *mipi;
 	struct regulator *reg_l8_avdd;
-	struct regulator *reg_l12_pll_vdda;
-	struct regulator *reg_l8_vddio;
-	struct regulator *ext_dsv_load;
-	int gpio42;
+	struct regulator *reg_s4_iovdd;
+	int pmic8821_mpp2;
 };
-#define to_panel_lgit(x) container_of(x, struct panel_lgit, base)
+#define to_panel_truly(x) container_of(x, struct panel_truly, base)
 
-#define DSV_ONBST 57
-//#define DISP_RST  (41 + NR_GPIO_IRQS)
-#define DISP_RST (PM8821_MPP_PM_TO_SYS(2));
-//#define DISP_RST (2 - 1 + NR_GPIO_IRQS + PM8921_NR_GPIOS) /* this maps to PM8821_MPP_PM_TO_SYS(2) */
-
-// XXX hack.. use proper bl framework..
-void lm3530_lcd_backlight_set_level(int level);
-void lm3530_lcd_backlight_pwm_disable(void);
-
-	static int mpp2;
-/* --------- start copy/paste: -------------------------------------- */
-/* command sequences taken from board-mako-display.c.. avoiding
- * reformatting to make copy/paste updates easier.
- */
-/*
-static char lcd_mirror [2] = {0x36, 0x02};
-static char panel_setting_1 [6] = {0xB0, 0x43, 0x00, 0x00, 0x00, 0x00};
-static char panel_setting_2 [3] = {0xB3, 0x0A, 0x9F};
-
-static char display_mode1 [6] = {0xB5, 0x50, 0x20, 0x40, 0x00, 0x20};
-static char display_mode2 [8] = {0xB6, 0x00, 0x14, 0x0F, 0x16, 0x13, 0x05, 0x05};
-
-static char p_gamma_r_setting[10] = {0xD0, 0x40, 0x44, 0x76, 0x01, 0x00, 0x00, 0x30, 0x20, 0x01};
-static char n_gamma_r_setting[10] = {0xD1, 0x40, 0x44, 0x76, 0x01, 0x00, 0x00, 0x30, 0x20, 0x01};
-static char p_gamma_g_setting[10] = {0xD2, 0x40, 0x44, 0x76, 0x01, 0x00, 0x00, 0x30, 0x20, 0x01};
-static char n_gamma_g_setting[10] = {0xD3, 0x40, 0x44, 0x76, 0x01, 0x00, 0x00, 0x30, 0x20, 0x01};
-static char p_gamma_b_setting[10] = {0xD4, 0x20, 0x23, 0x74, 0x00, 0x1F, 0x10, 0x50, 0x33, 0x03};
-static char n_gamma_b_setting[10] = {0xD5, 0x20, 0x23, 0x74, 0x00, 0x1F, 0x10, 0x50, 0x33, 0x03};
-
-static char ief_on_set0[2] = {0xE0, 0x00};
-static char ief_on_set4[4] = {0xE4, 0x00, 0x00, 0x00};
-static char ief_on_set5[4] = {0xE5, 0x00, 0x00, 0x00};
-static char ief_on_set6[4] = {0xE6, 0x00, 0x00, 0x00};
-
-static char ief_set1[5] = {0xE1, 0x00, 0x00, 0x01, 0x01};
-static char ief_set2[3] = {0xE2, 0x01, 0x00};
-static char ief_set3[6] = {0xE3, 0x00, 0x00, 0x42, 0x35, 0x00};
-static char ief_set7[9] = {0xE7, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40};
-static char ief_set8[9] = {0xE8, 0x3D, 0x3D, 0x3D, 0x3D, 0x3D, 0x3D, 0x3D, 0x3D};
-static char ief_set9[9] = {0xE9, 0x3B, 0x3B, 0x3B, 0x3B, 0x3B, 0x3B, 0x3B, 0x3B};
-static char ief_setA[9] = {0xEA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-static char ief_setB[9] = {0xEB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-static char ief_setC[9] = {0xEC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-static char osc_setting[4] =     {0xC0, 0x00, 0x0A, 0x10};
-static char power_setting3[13] = {0xC3, 0x00, 0x88, 0x03, 0x20, 0x01, 0x57, 0x4F, 0x33,0x02,0x38,0x38,0x00};
-static char power_setting4[6] =  {0xC4, 0x31, 0x24, 0x11, 0x11, 0x3D};
-static char power_setting5[4] =  {0xC5, 0x3B, 0x3B, 0x03};
-
-static char cabc_set0[2] = {0x51, 0xFF};
-static char cabc_set1[2] = {0x5E, 0x00}; // CABC MIN
-static char cabc_set2[2] = {0x53, 0x2C};
-static char cabc_set3[2] = {0x55, 0x02};
-static char cabc_set4[6] = {0xC8, 0x22, 0x22, 0x22, 0x33, 0x80};//A-CABC applied
-
-static char exit_sleep_power_control_2[2] =  {0xC2,0x06};
-static char exit_sleep_power_control_3[2] =  {0xC2,0x0E};
-static char otp_protection[3] =  {0xF1,0x10,0x00};
-static char sleep_out_for_cabc[2] = {0x11,0x00};
-static char gate_output_enabled_by_manual[2] = {0xC1,0x08};
-
-static char display_on[2] =  {0x29,0x00};
-
-static char display_off[2] = {0x28,0x00};
-
-static char enter_sleep[2] = {0x10,0x00};
-
-static char analog_boosting_power_control[2] = {0xC2,0x00};
-static char enter_sleep_power_control_3[2] = {0xC2,0x01};
-static char enter_sleep_power_control_2[2] = {0xC2,0x00};
-
-static char deep_standby[2] = {0xC1,0x02};
-*/
-/* --------- end copy/paste: ---------------------------------------- */
-static char display_off[2] = {0x28,0x00};
-static char enter_sleep[2] = {0x10,0x00};
-static char display_on[2] =  {0x29,0x00};
-
-
+static char enter_sleep[2] = {0x10, 0x00};
 /*************************** IC for AUO 4' MIPI * 480RGBx854************/
 static char write_memory1[4]={0xFF,0x80,0x09,0x01};//Enable EXTC
 static char write_memory2[2]={0x00,0x80};//Shift address
@@ -297,192 +217,98 @@ static char write_memory102[2]={0xCC, 0x0A};
 
 static char write_memory103[2]={0x00, 0xD1};
 static char write_memory104[2]={0xCC, 0x06};
-
-
 //-------------------- sleep out --------------------//
 static char write_memory105[1]={0x11};
 //delay1m{200};
 
 static char write_memory106[1]={0x29};
 
-static void panel_lgit_destroy(struct panel *panel)
+static void panel_truly_destroy(struct panel *panel)
 {
-	struct panel_lgit *panel_lgit = to_panel_lgit(panel);
-	kfree(panel_lgit);
+	struct panel_truly *panel_truly = to_panel_truly(panel);
+	kfree(panel_truly);
 }
-/*
-static int toggle_lcd_reset(struct panel *panel, int val)
-{
-	struct pm_gpio gpio_param = {
-		.direction = PM_GPIO_DIR_OUT,
-		.output_buffer = PM_GPIO_OUT_BUF_CMOS,
-		.output_value = val,
-		.pull = PM_GPIO_PULL_NO,
-		.vin_sel = 2,
-		.out_strength = PM_GPIO_STRENGTH_HIGH,
-		.function = PM_GPIO_FUNC_PAIRED,
-		.inv_int_pol = 0,
-		.disable_pin = 0,
-	};
-	int ret;
 
-	DRM_DEBUG_KMS("set LCD RESET %s\n", val ? "HIGH" : "LOW");
-
-	ret = pm8xxx_gpio_config(DISP_RST, &gpio_param);
-	if (ret) {
-		dev_err(panel->dev->dev, "failed to set LCD reset: %d\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-*/
-static int panel_lgit_power_on(struct panel *panel)
+static int panel_truly_power_on(struct panel *panel)
 {
 	struct drm_device *dev = panel->dev;
-	struct panel_lgit *panel_lgit = to_panel_lgit(panel);
+	struct panel_truly *panel_truly = to_panel_truly(panel);
 	int ret = 0;
 
-	if (panel_lgit->ext_dsv_load) {
-		ret = regulator_enable(panel_lgit->ext_dsv_load);
-		if (ret) {
-			dev_err(dev->dev, "failed to enable ext_dsv_load: %d\n", ret);
-			goto fail1;
-		}
-	}
-
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l8_avdd, 110000);
+	ret = regulator_set_optimum_mode(panel_truly->reg_l8_avdd, 110000);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to set l8 mode: %d\n", ret);
-		goto fail2;
+		goto fail1;
 	}
 
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l12_pll_vdda, 100000);
+	ret = regulator_set_optimum_mode(panel_truly->reg_s4_iovdd, 100000);
 	if (ret < 0) {
-		dev_err(dev->dev, "failed to set l2 mode: %d\n", ret);
+		dev_err(dev->dev, "failed to set s4 mode: %d\n", ret);
 		goto fail2;
 	}
 
-	ret = regulator_enable(panel_lgit->reg_l8_avdd);
+	ret = regulator_enable(panel_truly->reg_l8_avdd);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable l8: %d\n", ret);
+		goto fail1;
+	}
+
+	udelay(100);
+
+	ret = regulator_enable(panel_truly->reg_s4_iovdd);
+	if (ret) {
+		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
-	}
-
-	udelay(100);
-
-	ret = regulator_enable(panel_lgit->reg_l8_vddio);
-	if (ret) {
-		dev_err(dev->dev, "failed to enable lvs6: %d\n", ret);
-		goto fail3;
-	}
-
-	udelay(100);
-
-	ret = regulator_enable(panel_lgit->reg_l12_pll_vdda);
-	if (ret) {
-		dev_err(dev->dev, "failed to enable l2: %d\n", ret);
-		goto fail4;
 	}
 
 	mdelay(2);
-/*
-	ret = toggle_lcd_reset(panel, 1);
-	if (ret)
-		goto fail5;
-i*/
-//	ret = devm_gpio_request(&pdev->dev, mpp2, "disp_rst_n");
-//         ret = gpio_request(mpp2, "disp_rst_n");
-/*
-	 mpp2 = PM8821_MPP_PM_TO_SYS(2);
-                if (ret) {
-                        dev_err(dev->dev, "request MPP 2 failed, rc=%d\n", ret);
-                        return -ENODEV;
-                }
- printk("%s: gpio_request(PM8821_MPP_PM_TO_SYS(2),\"disp_rst_n\") returned %d\n", __func__, ret);
-	 ret = gpio_export(mpp2, true);
- printk("%s: gpio_export(PM8821_MPP_PM_TO_SYS(2),\"disp_rst_n\") returned %d\n", __func__, ret);
-
-	ret = gpio_direction_output(mpp2, 1);
- printk("%s: gpio_direction_output(PM8821_MPP_PM_TO_SYS(2),\"disp_rst_n\") returned %d\n", __func__, ret);
-         mdelay(1);
-	ret = gpio_direction_output(mpp2, 0);
-         usleep(50);
-	ret = gpio_direction_output(mpp2, 1);
-*/	 gpio_set_value_cansleep(mpp2, 1);
-         mdelay(1);
-         gpio_set_value_cansleep(mpp2, 0);
-         usleep(50);
-         gpio_set_value_cansleep(mpp2, 1);
-	
+	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
+        mdelay(1);
+        gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
+        usleep(50);
+        gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
 
 	return 0;
 
-//fail5:
-//	regulator_disable(panel_lgit->reg_l12_pll_vdda);
-fail4:
-	regulator_disable(panel_lgit->reg_l8_vddio);
-fail3:
-	regulator_disable(panel_lgit->reg_l8_avdd);
 fail2:
-	if (panel_lgit->ext_dsv_load)
-		regulator_disable(panel_lgit->ext_dsv_load);
+	regulator_disable(panel_truly->reg_s4_iovdd);
 fail1:
+	regulator_disable(panel_truly->reg_l8_avdd);
+	
 	return ret;
 }
 
-static int panel_lgit_power_off(struct panel *panel)
+static int panel_truly_power_off(struct panel *panel)
 {
 	struct drm_device *dev = panel->dev;
-	struct panel_lgit *panel_lgit = to_panel_lgit(panel);
+	struct panel_truly *panel_truly = to_panel_truly(panel);
 	int ret;
 
-//	toggle_lcd_reset(panel, 0);
-		gpio_set_value_cansleep(mpp2, 0);
+	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
 	udelay(100);
 
-	ret = regulator_disable(panel_lgit->reg_l8_vddio);
-	if (ret)
-		dev_err(dev->dev, "failed to disable lvs6: %d\n", ret);
-
-	udelay(100);
-
-	ret = regulator_disable(panel_lgit->reg_l8_avdd);
+	ret = regulator_disable(panel_truly->reg_l8_avdd);
 	if (ret)
 		dev_err(dev->dev, "failed to disable l8: %d\n", ret);
 
 	udelay(100);
 
-	ret = regulator_disable(panel_lgit->reg_l12_pll_vdda);
+	ret = regulator_disable(panel_truly->reg_s4_iovdd);
 	if (ret)
-		dev_err(dev->dev, "failed to disable l2: %d\n", ret);
-
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l8_avdd, 100);
-	if (ret < 0)
-		dev_err(dev->dev, "failed to set l8 mode: %d\n", ret);
-
-	ret = regulator_set_optimum_mode(panel_lgit->reg_l12_pll_vdda, 100);
-	if (ret < 0)
-		dev_err(dev->dev, "failed to set l2 mode: %d\n", ret);
-
-	if (panel_lgit->ext_dsv_load) {
-		ret = regulator_disable(panel_lgit->ext_dsv_load);
-		if (ret)
-			dev_err(dev->dev, "failed to disable ext_dsv_load: %d\n", ret);
-	}
+		dev_err(dev->dev, "failed to disable s4: %d\n", ret);
 
 	return 0;
 }
 
-static int panel_lgit_on(struct panel *panel)
+static int panel_truly_on(struct panel *panel)
 {
-	struct panel_lgit *panel_lgit = to_panel_lgit(panel);
-	struct mipi_adapter *mipi = panel_lgit->mipi;
+	struct panel_truly *panel_truly = to_panel_truly(panel);
+	struct mipi_adapter *mipi = panel_truly->mipi;
 	int ret = 0;
 
 	DRM_DEBUG_KMS("panel on\n");
 
-	ret = panel_lgit_power_on(panel);
+	ret = panel_truly_power_on(panel);
 	if (ret)
 		return ret;
 
@@ -491,7 +317,7 @@ static int panel_lgit_on(struct panel *panel)
 		.format = DST_FORMAT_RGB888,
 		.traffic_mode = NON_BURST_SYNCH_EVENT,
 		.bllp_power_stop = true,
-		.eof_bllp_power_stop = false,
+		.eof_bllp_power_stop = true,
 		.hsa_power_stop = false,
 		.hbp_power_stop = true,
 		.hfp_power_stop = true,
@@ -510,82 +336,28 @@ static int panel_lgit_on(struct panel *panel)
 		.crc_check = false,
 		.phy = {
 			/* regulator */
-			    {0x03, 0x0a, 0x04, 0x00, 0x20},
+			{0x03, 0x0a, 0x04, 0x00, 0x20},
 		        /* timing   */
 		        {0x67, 0x16, 0x0e, 0x00, 0x38, 0x3c, 0x12, 0x19,
-	                0x18, 0x03, 0x04, 0xa0},  //Pamn suggest
-        		//      {0x67, 0x16, 0x3E, 0x00, 0x38, 0x3c, 0x12, 0x19,
-	        	//      0x18, 0x03, 0x04, 0xa0}, // pamn2
-
-
-		        /* phy ctrl */
+	                0x18, 0x03, 0x04, 0xa0}, 
+			/* phy ctrl */
 		        {0x5f, 0x00, 0x00, 0x10},
 		        /* strength */
 		        {0xff, 0x00, 0x06, 0x00},
 		        /* pll control */
-		        {0x00, 0x46, 0x30, 0xc4, 0x4a, 0x01, 0x19,/*0x00, 0x20, 0x08,*/ 0x62,
-		         0x71, 0x0f, 0x01,
+		        /*{0x00, 0x46, 0x30, 0xc4, 0x4a, 0x01, 0x19, 0x62, 0x71, 0x0f, 0x01,
+	                0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01},*/
+		        {0x00, 0x56, 0x31, 0xda, 0x4a, 0x01, 0x19, 0x62, 0x71, 0x0f, 0x07,
 	                0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01},
 		},
 	});
 
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
 		.low_power = false,
-		.lanes = 0xf,
+		.lanes = 0x3,
 	});
 
 	mipi_on(mipi);
-
-	/* Display Initial Set: */
-/*	mipi_lwrite(mipi, true, 0, lcd_mirror);
-	mipi_lwrite(mipi, true, 0, panel_setting_1);
-	mipi_lwrite(mipi, true, 0, panel_setting_2);
-	mipi_lwrite(mipi, true, 0, display_mode1);
-	mipi_lwrite(mipi, true, 0, display_mode2);
-*/
-	/* Gamma Set: */
-/*	mipi_lwrite(mipi, true, 0, p_gamma_r_setting);
-	mipi_lwrite(mipi, true, 0, n_gamma_r_setting);
-	mipi_lwrite(mipi, true, 0, p_gamma_g_setting);
-	mipi_lwrite(mipi, true, 0, n_gamma_g_setting);
-	mipi_lwrite(mipi, true, 0, p_gamma_b_setting);
-	mipi_lwrite(mipi, true, 0, n_gamma_b_setting);
-*/
-	/* IEF Set: */
-/*	mipi_lwrite(mipi, true, 0, ief_on_set0);
-	mipi_lwrite(mipi, true, 0, ief_set1);
-	mipi_lwrite(mipi, true, 0, ief_set2);
-	mipi_lwrite(mipi, true, 0, ief_set3);
-	mipi_lwrite(mipi, true, 0, ief_on_set4);
-	mipi_lwrite(mipi, true, 0, ief_on_set5);
-	mipi_lwrite(mipi, true, 0, ief_on_set6);
-	mipi_lwrite(mipi, true, 0, ief_set7);
-	mipi_lwrite(mipi, true, 0, ief_set8);
-	mipi_lwrite(mipi, true, 0, ief_set9);
-	mipi_lwrite(mipi, true, 0, ief_setA);
-	mipi_lwrite(mipi, true, 0, ief_setB);
-	mipi_lwrite(mipi, true, 0, ief_setC);
-*/
-	/* Power Supply Set: */
-/*	mipi_lwrite(mipi, true, 0, osc_setting);
-	mipi_lwrite(mipi, true, 0, power_setting3);
-	mipi_lwrite(mipi, true, 0, power_setting4);
-	mipi_lwrite(mipi, true, 0, power_setting5);
-
-	mipi_lwrite(mipi, true, 0, cabc_set0);
-	mipi_lwrite(mipi, true, 0, cabc_set1);
-	mipi_lwrite(mipi, true, 0, cabc_set2);
-	mipi_lwrite(mipi, true, 0, cabc_set3);
-	mipi_lwrite(mipi, true, 0, cabc_set4);
-
-	mipi_lwrite(mipi, true, 0, exit_sleep_power_control_2);
-	msleep(10);
-	mipi_lwrite(mipi, true, 0, exit_sleep_power_control_3);
-	msleep(1);
-	gpio_set_value(DSV_ONBST, 1);
-	mdelay(20);
-*/
-
 mipi_lwrite(mipi, true, 0, write_memory1);
 mipi_lwrite(mipi, true, 0, write_memory2);
 mipi_lwrite(mipi, true, 0, write_memory3);
@@ -690,69 +462,39 @@ mipi_lwrite(mipi, true, 0, write_memory102);
 mipi_lwrite(mipi, true, 0, write_memory103);
 mipi_lwrite(mipi, true, 0, write_memory104);
 mdelay(250);
-mipi_lwrite(mipi, true, 0, write_memory105);
-mipi_lwrite(mipi, true, 0, write_memory106);
-	mipi_dcs_swrite(mipi, true, 0, false, display_on[0]);
-
-/*
-	// Power Supply Set
-	mipi_lwrite(mipi, true, 0, otp_protection);
-	mipi_lwrite(mipi, true, 0, sleep_out_for_cabc);
-	mipi_lwrite(mipi, true, 0, gate_output_enabled_by_manual);
-	mipi_dcs_swrite(mipi, true, 0, false, display_on[0]);
-*/
-	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
-		.low_power = true,
-		.lanes = 0xf,
-	});
-
-
+	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]);
+        mdelay(20);
+        mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
+        mdelay(5);
 
 	return 0;
 }
 
-static int panel_lgit_off(struct panel *panel)
+static int panel_truly_off(struct panel *panel)
 {
-	struct panel_lgit *panel_lgit = to_panel_lgit(panel);
-	struct mipi_adapter *mipi = panel_lgit->mipi;
+	struct panel_truly *panel_truly = to_panel_truly(panel);
+	struct mipi_adapter *mipi = panel_truly->mipi;
 	int ret;
 
 	DRM_DEBUG_KMS("panel off\n");
-/*
-	lm3530_lcd_backlight_set_level(0x02);
-	lm3530_lcd_backlight_pwm_disable();
-*/
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
-		.low_power = false,
-		.lanes = 0xf,
+		.low_power = true,
+		.lanes = 0x3,
 	});
 
-	mipi_dcs_swrite(mipi, true, 0, false, display_off[0]);
-	mdelay(20);
 	mipi_dcs_swrite(mipi, true, 0, false, enter_sleep[0]);
 	mdelay(5);
 
-	gpio_set_value(DSV_ONBST, 0);
-	mdelay(20);
-/*
-	mipi_lwrite(mipi, true, 0, analog_boosting_power_control);
-	mdelay(10);
-	mipi_lwrite(mipi, true, 0, enter_sleep_power_control_3);
-	mdelay(10);
-	mipi_lwrite(mipi, true, 0, enter_sleep_power_control_2);
-	mipi_lwrite(mipi, true, 0, deep_standby);
-	mdelay(10);
-*/
 	mipi_off(mipi);
 
-	ret = panel_lgit_power_off(panel);
+	ret = panel_truly_power_off(panel);
 	if (ret)
 		return ret;
 
 	return 0;
 }
 
-static struct drm_display_mode *panel_lgit_mode(struct panel *panel)
+static struct drm_display_mode *panel_truly_mode(struct panel *panel)
 {
 	struct drm_display_mode *mode = drm_mode_create(panel->dev);
 
@@ -775,14 +517,14 @@ static struct drm_display_mode *panel_lgit_mode(struct panel *panel)
 	return mode;
 }
 
-static const struct panel_funcs panel_lgit_funcs = {
-		.destroy = panel_lgit_destroy,
-		.on = panel_lgit_on,
-		.off = panel_lgit_off,
-		.mode = panel_lgit_mode,
+static const struct panel_funcs panel_truly_funcs = {
+		.destroy = panel_truly_destroy,
+		.on = panel_truly_on,
+		.off = panel_truly_off,
+		.mode = panel_truly_mode,
 };
 
-struct panel *panel_lgit_init(struct drm_device *dev,
+struct panel *panel_truly_init(struct drm_device *dev,
 		// XXX uggg.. maybe we should just pass in a config structure
 		// pre-populated with regulators, gpio's, etc??  the panel
 		// needs the drm device, but we need the pdev to lookup the
@@ -791,21 +533,20 @@ struct panel *panel_lgit_init(struct drm_device *dev,
 		struct platform_device *pdev,
 		struct mipi_adapter *mipi)
 {
-	struct panel_lgit *panel_lgit;
+	struct panel_truly *panel_truly;
 	struct panel *panel = NULL;
 	int ret;
 
-	printk(" vinay lge panel init\n");
-	panel_lgit = kzalloc(sizeof(*panel_lgit), GFP_KERNEL);
-	if (!panel_lgit) {
+	panel_truly = kzalloc(sizeof(*panel_truly), GFP_KERNEL);
+	if (!panel_truly) {
 		ret = -ENOMEM;
 		goto fail;
 	}
 
-	panel_lgit->mipi = mipi;
+	panel_truly->mipi = mipi;
 
-	panel = &panel_lgit->base;
-	ret = panel_init(dev, panel, &panel_lgit_funcs);
+	panel = &panel_truly->base;
+	ret = panel_init(dev, panel, &panel_truly_funcs);
 	if (ret)
 		goto fail;
 
@@ -814,54 +555,43 @@ struct panel *panel_lgit_init(struct drm_device *dev,
 	 * uses the same panel.
 	 */
 
-	ret = devm_gpio_request(&pdev->dev, DSV_ONBST, "DSV_ONBST_en");
+	panel_truly->pmic8821_mpp2 = PM8821_MPP_PM_TO_SYS(2);
+	ret = gpio_request(panel_truly->pmic8821_mpp2, "disp_rst_n");
 	if (ret) {
-		dev_err(dev->dev, "failed to request DSV_ONBST gpio: %d\n", ret);
+		dev_err(dev->dev, "failed to request disp_rst_n mpp: %d\n", ret);
 		goto fail;
 	}
-	ret = gpio_direction_output(DSV_ONBST, 1);
+	ret = gpio_export(panel_truly->pmic8821_mpp2, true);
 	if (ret) {
-		dev_err(dev->dev, "failed to set DSV_ONBST direction: %d\n", ret);
+		dev_err(dev->dev, "failed to request gpio export mpp: %d\n", ret);
 		goto fail;
 	}
-	 mpp2 = PM8821_MPP_PM_TO_SYS(2);
-	ret = devm_gpio_request(&pdev->dev, mpp2, "disp_rst_n");
+	ret = gpio_direction_output(panel_truly->pmic8821_mpp2, 0);
 	if (ret) {
-		dev_err(dev->dev, "failed to request disp_rst_n gpio: %d\n", ret);
+		dev_err(dev->dev, "failed to request gpio direction output mpp: %d\n", ret);
 		goto fail;
 	}
-
-	panel_lgit->ext_dsv_load = devm_regulator_get(&pdev->dev, "ext_dsv_load");
-	if (IS_ERR(panel_lgit->ext_dsv_load))
-		panel_lgit->ext_dsv_load = NULL;
-
-	panel_lgit->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
-	if (IS_ERR(panel_lgit->reg_l8_avdd)) {
-		ret = PTR_ERR(panel_lgit->reg_l8_avdd);
+	panel_truly->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
+	if (IS_ERR(panel_truly->reg_l8_avdd)) {
+		ret = PTR_ERR(panel_truly->reg_l8_avdd);
 		dev_err(dev->dev, "failed to request dsi_avdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_lgit->reg_l8_vddio = devm_regulator_get(dev->dev, "dsi1_vddio");
-	if (IS_ERR(panel_lgit->reg_l8_vddio)) {
-		ret = PTR_ERR(panel_lgit->reg_l8_vddio);
-		dev_err(dev->dev, "failed to request dsi_vddio regulator: %d\n", ret);
-		goto fail;
-	}
-	panel_lgit->reg_l12_pll_vdda = devm_regulator_get(dev->dev, "dsi1_pll_vdda");
-	if (IS_ERR(panel_lgit->reg_l12_pll_vdda)) {
-		ret = PTR_ERR(panel_lgit->reg_l12_pll_vdda);
-		dev_err(dev->dev, "failed to request dsi_pll_vdda regulator: %d\n", ret);
+	panel_truly->reg_s4_iovdd = devm_regulator_get(dev->dev, "dsi1_s4_iovdd");
+	if (IS_ERR(panel_truly->reg_s4_iovdd)) {
+		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
+		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_lgit->reg_l8_avdd,  3300000, 3300000);
+	ret = regulator_set_voltage(panel_truly->reg_l8_avdd,  3300000, 3300000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l8 failed: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_lgit->reg_l12_pll_vdda,  2800000, 2800000);
+	ret = regulator_set_voltage(panel_truly->reg_s4_iovdd,  1800000, 1800000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l2 failed: %d\n", ret);
 		goto fail;
@@ -871,6 +601,6 @@ struct panel *panel_lgit_init(struct drm_device *dev,
 	return panel;
 fail:
 	if (panel)
-		panel_lgit_destroy(panel);
+		panel_truly_destroy(panel);
 	return ERR_PTR(ret);
 }

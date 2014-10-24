@@ -66,7 +66,7 @@ struct mipi_panel_config {
 		uint32_t regulator[5];
 		uint32_t timing[12];
 		uint32_t ctrl[4];
-		uint32_t strength[4];
+		uint32_t strength[5];
 		uint32_t pll[21];
 	} phy;
 };

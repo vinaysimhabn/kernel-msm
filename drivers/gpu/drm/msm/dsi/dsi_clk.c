@@ -88,13 +88,16 @@ void dsi_clk_disable_ahb(struct dsi *dsi)
 static void enable_clk(struct dsi *dsi, enum mmss_cc_clk clk,
 		struct dsi_clk_desc *desc)
 {
+	int pclk=1;
 	/* TODO: this should eventually be hidden behind clk_set_rate().. */
 	if (desc->mnd_mode == 0) {
+		if(clk==pclk)
+			desc->pre_div_func=2;
 		cc_write(dsi, REG_MMSS_CC_CLK_NS(clk),
 				MMSS_CC_CLK_NS_SRC(3) |
-				/*MMSS_CC_CLK_NS_SRC(desc->src) |
-				MMSS_CC_CLK_NS_PRE_DIV_FUNC(desc->pre_div_func));*/
-				MMSS_CC_CLK_NS_PRE_DIV_FUNC(2));
+				/*MMSS_CC_CLK_NS_SRC(desc->src) |*/
+				MMSS_CC_CLK_NS_PRE_DIV_FUNC(desc->pre_div_func));
+
 		cc_write(dsi, REG_MMSS_CC_CLK_CC(clk),
 				MMSS_CC_CLK_CC_CLK_EN |
 				MMSS_CC_CLK_CC_ROOT_EN |

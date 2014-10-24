@@ -192,6 +192,7 @@ VREG_CONSUMERS(S4) = {
 	REGULATOR_SUPPLY("hdmi_lvl_tsl",	"hdmi_msm.0"),
 	REGULATOR_SUPPLY("vdd-io",		"spi0.2"),
 	REGULATOR_SUPPLY("sata_pmp_pwr",	"msm_sata.0"),
+	REGULATOR_SUPPLY("dsi1_s4_iovdd",	"mdp.0"), /* MIPI DSI */
 };
 VREG_CONSUMERS(S5) = {
 	REGULATOR_SUPPLY("8921_s5",		NULL),
@@ -709,7 +710,7 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 	RPM_LDO(L29, 0, 1, 0, 2000000, 2000000, NULL,          0,     0),
 
 	/*     ID  a_on pd ss                   supply */
-	/*RPM_VS(LVS1, 0, 1, 0,                   "8921_s4"),*/
+/*	RPM_VS(LVS1, 0, 1, 0,                   "8921_s4"),*/
 	RPM_VS(LVS1, 1, 1, 0,                   "8921_s4"), /* MIPI DSI keep always ON */
 	RPM_VS(LVS3, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS4, 0, 1, 0,                   "8921_s4"),

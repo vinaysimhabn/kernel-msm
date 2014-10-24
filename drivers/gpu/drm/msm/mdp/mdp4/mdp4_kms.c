@@ -227,7 +227,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	struct drm_encoder *encoder;
 //	struct drm_connector *connector;
 	struct drm_panel *panel;
-	struct hdmi *hdmi;
+//	struct hdmi *hdmi;
 	int ret;
 
 	/* construct non-private planes: */
@@ -259,7 +259,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		goto fail;
 	}
 
-	plane = mdp4_plane_init(dev, RGB2, true);
+	plane = mdp4_plane_init(dev, RGB1, true);
 	if (IS_ERR(plane)) {
 		dev_err(dev->dev, "failed to construct plane for RGB2\n");
 		ret = PTR_ERR(plane);
@@ -303,14 +303,13 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
                 goto fail;
         }
 
-
 //	priv->connectors[priv->num_connectors++] = connector;
 
 	/*
 	 * Setup DTV/HDMI path: RGB1 -> DMA_E -> DTV -> HDMI:
 	 */
-
-	plane = mdp4_plane_init(dev, RGB1, true);
+/*
+	plane = mdp4_plane_init(dev, RGB2, true);
 	if (IS_ERR(plane)) {
 		dev_err(dev->dev, "failed to construct plane for RGB1\n");
 		ret = PTR_ERR(plane);
@@ -330,9 +329,9 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		ret = PTR_ERR(encoder);
 		goto fail;
 	}
-
+*/
 	/* DTV can be hooked to DMA_E: */
-	encoder->possible_crtcs = 1 << priv->num_crtcs;
+/*	encoder->possible_crtcs = 1 << priv->num_crtcs;
 
 	priv->crtcs[priv->num_crtcs++] = crtc;
 	priv->encoders[priv->num_encoders++] = encoder;
@@ -343,7 +342,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		dev_err(dev->dev, "failed to initialize HDMI: %d\n", ret);
 		goto fail;
 	}
-
+*/
 	return 0;
 
 fail:

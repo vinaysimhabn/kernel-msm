@@ -24,12 +24,6 @@
 struct mdp4_dsi_encoder {
 	struct drm_encoder base;
 	struct drm_panel *panel;
-	struct clk *mdp_p_clk;
-	struct clk *lut_mdp_clk;
-	struct clk *mdp_clk;
-	struct clk_hw *dsi_clk;
-	unsigned long int pixclock;
-        struct regulator *regs[3];
 	bool enabled;
 	uint32_t bsc;
 };
@@ -97,12 +91,9 @@ static const struct drm_encoder_funcs mdp4_dsi_encoder_funcs = {
 
 static void mdp4_dsi_encoder_dpms(struct drm_encoder *encoder, int mode)
 {
-	//struct drm_device *dev = encoder->dev;
 	struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
 	struct mdp4_kms *mdp4_kms = get_kms(encoder);
-	struct drm_panel *panel = mdp4_dsi_encoder->panel;
 	bool enabled = (mode == DRM_MODE_DPMS_ON);
-//	int i;
 
 	DBG("mode=%d", mode);
 
@@ -110,32 +101,8 @@ static void mdp4_dsi_encoder_dpms(struct drm_encoder *encoder, int mode)
 		return;
 
 	if (enabled) {
-		unsigned long pc = mdp4_dsi_encoder->pixclock;
-		//int ret;
 
-		bs_set(mdp4_dsi_encoder, 2);
-/*
-		 for (i = 0; i < ARRAY_SIZE(mdp4_dsi_encoder->regs); i++) {
-                        ret = regulator_enable(mdp4_dsi_encoder->regs[i]);
-                        if (ret)
-                                dev_err(dev->dev, "failed to enable regulator: %d\n", ret);
-                }
-*/
-		DBG("setting mdp_p_clk=%lu", pc);
-/*
-		ret = clk_set_rate(mdp4_dsi_encoder->mdp_p_clk, pc);
-		if (ret)
-			dev_err(dev->dev, "failed to set mdp_p_clk to %lu: %d\n", pc, ret);
-		clk_prepare_enable(mdp4_dsi_encoder->mdp_p_clk);
-		ret = clk_prepare_enable(mdp4_dsi_encoder->lut_mdp_clk);
-		if (ret)
-			dev_err(dev->dev, "failed to enable lut_mdp_clk: %d\n", ret);
-		ret = clk_prepare_enable(mdp4_dsi_encoder->mdp_clk);
-		if (ret)
-			dev_err(dev->dev, "failed to enabled mdp_clk: %d\n", ret);
-*/
-		if (panel)
-                        drm_panel_enable(panel);
+		bs_set(mdp4_dsi_encoder, 1);
 
 		mdp4_write(mdp4_kms, REG_MDP4_DSI_ENABLE, 1);
 	} else {
@@ -149,11 +116,7 @@ static void mdp4_dsi_encoder_dpms(struct drm_encoder *encoder, int mode)
 		 * the settings changes for the new modeset (like new
 		 * scanout buffer) don't latch properly..
 		 */
-		mdp_irq_wait(&mdp4_kms->base, MDP4_IRQ_EXTERNAL_VSYNC);
-
-		clk_disable_unprepare(mdp4_dsi_encoder->mdp_p_clk);
-		clk_disable_unprepare(mdp4_dsi_encoder->lut_mdp_clk);
-		clk_disable_unprepare(mdp4_dsi_encoder->mdp_clk);
+		mdp_irq_wait(&mdp4_kms->base, MDP4_IRQ_PRIMARY_VSYNC);
 
 		bs_set(mdp4_dsi_encoder, 0);
 	}
@@ -172,7 +135,7 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 		struct drm_display_mode *mode,
 		struct drm_display_mode *adjusted_mode)
 {
-	struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
+	//struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
 	struct mdp4_kms *mdp4_kms = get_kms(encoder);
 	uint32_t dsi_hsync_skew, vsync_period, vsync_len, ctrl_pol;
 	uint32_t display_v_start, display_v_end;
@@ -189,10 +152,6 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 			mode->vsync_end, mode->vtotal,
 			mode->type, mode->flags);
 
-	mdp4_dsi_encoder->pixclock = mode->clock * 1000;
-
-	DBG("pixclock=%lu", mdp4_dsi_encoder->pixclock);
-
 	ctrl_pol = 0;
 	if (mode->flags & DRM_MODE_FLAG_NHSYNC)
 		ctrl_pol |= MDP4_DSI_CTRL_POLARITY_HSYNC_LOW;
@@ -204,13 +163,17 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 
 	hsync_start_x = (mode->htotal - mode->hsync_start);
 	hsync_end_x = mode->htotal - (mode->hsync_start - mode->hdisplay) - 1;
-
+//	hsync_start_x = 49;
+  //     hsync_end_x = 529;
+       mode->htotal = 574;
+       mode->vtotal = 896;
+	
 	vsync_period = mode->vtotal * mode->htotal;
 	vsync_len = (mode->vsync_end - mode->vsync_start) * mode->htotal;
 	display_v_start = (mode->vtotal - mode->vsync_start) * mode->htotal + dsi_hsync_skew;
 	display_v_end = vsync_period - ((mode->vsync_start - mode->vdisplay) * mode->htotal) + dsi_hsync_skew - 1;
 
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,
+/*	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,
 			MDP4_DSI_HSYNC_CTRL_PULSEW(mode->hsync_end - mode->hsync_start) |
 			MDP4_DSI_HSYNC_CTRL_PERIOD(mode->htotal));
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_PERIOD, vsync_period);
@@ -220,17 +183,25 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 			MDP4_DSI_DISPLAY_HCTRL_END(hsync_end_x));
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VSTART, display_v_start);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VEND, display_v_end);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_BORDER_CLR, 0);
+*/
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_CTRL_POLARITY, ctrl_pol);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_UNDERFLOW_CLR,
 			MDP4_DSI_UNDERFLOW_CLR_ENABLE_RECOVERY |
 			MDP4_DSI_UNDERFLOW_CLR_COLOR(0xff));
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_SKEW, dsi_hsync_skew);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_CTRL_POLARITY, ctrl_pol);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_ACTIVE_HCTL,
 			MDP4_DSI_ACTIVE_HCTL_START(0) |
 			MDP4_DSI_ACTIVE_HCTL_END(0));
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_SKEW, dsi_hsync_skew);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_BORDER_CLR, 0);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_ACTIVE_VSTART, 0);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_ACTIVE_VEND, 0);
+
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,0x023e0004);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_PERIOD, 0x0007d900);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_LEN, 0x0000023e);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_HCTRL,0x020f0030);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VSTART, 0x0000261e);
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VEND, 0x0007b75d);
 }
 
 static void mdp4_dsi_encoder_prepare(struct drm_encoder *encoder)
@@ -263,8 +234,9 @@ static const struct drm_encoder_helper_funcs mdp4_dsi_encoder_helper_funcs = {
 
 long mdp4_dsi_round_pixclk(struct drm_encoder *encoder, unsigned long rate)
 {
-	struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
-	return clk_round_rate(mdp4_dsi_encoder->mdp_p_clk, rate);
+//	struct mdp4_dsi_encoder *mdp4_dsi_encoder = to_mdp4_dsi_encoder(encoder);
+//	return clk_round_rate(mdp4_dsi_encoder->mdp_p_clk, rate);
+	return 0;
 }
 
 /* initialize encoder */
@@ -274,7 +246,6 @@ struct drm_encoder *mdp4_dsi_encoder_init(struct drm_device *dev,
 	struct drm_encoder *encoder = NULL;
 	struct mdp4_dsi_encoder *mdp4_dsi_encoder;
 	int ret;
-        //struct regulator *reg;
 
 	mdp4_dsi_encoder = kzalloc(sizeof(*mdp4_dsi_encoder), GFP_KERNEL);
 	if (!mdp4_dsi_encoder) {
@@ -282,72 +253,14 @@ struct drm_encoder *mdp4_dsi_encoder_init(struct drm_device *dev,
 		goto fail;
 	}
 
-	mdp4_dsi_encoder->panel = panel;
+//	mdp4_dsi_encoder->panel = panel;
 
 	encoder = &mdp4_dsi_encoder->base;
 
 	drm_encoder_init(dev, encoder, &mdp4_dsi_encoder_funcs,
 			 DRM_MODE_ENCODER_DSI);
 	drm_encoder_helper_add(encoder, &mdp4_dsi_encoder_helper_funcs);
-
-	/* dsi pll */
-        mdp4_dsi_encoder->dsi_clk = mpd4_dsi_pll_init(dev);
-        if (IS_ERR(mdp4_dsi_encoder->dsi_clk)) {
-                dev_err(dev->dev, "failed to get dsi_clk\n");
-                ret = PTR_ERR(mdp4_dsi_encoder->dsi_clk);
-                goto fail;
-        }
-
-/*
-	mdp4_dsi_encoder->mdp_p_clk = devm_clk_get(dev->dev, "mdp_p_clk");
-	if (IS_ERR(mdp4_dsi_encoder->mdp_p_clk)) {
-		dev_err(dev->dev, "failed to get mdp_p_clk\n");
-		ret = PTR_ERR(mdp4_dsi_encoder->mdp_p_clk);
-		goto fail;
-	}
-
-	mdp4_dsi_encoder->lut_mdp_clk = devm_clk_get(dev->dev, "lut_mdp_clk");
-	if (IS_ERR(mdp4_dsi_encoder->lut_mdp_clk)) {
-		dev_err(dev->dev, "failed to get lut_mdp_clk\n");
-		ret = PTR_ERR(mdp4_dsi_encoder->lut_mdp_clk);
-		goto fail;
-	}
-
-	mdp4_dsi_encoder->mdp_clk = devm_clk_get(dev->dev, "mdp_clk");
-	if (IS_ERR(mdp4_dsi_encoder->mdp_clk)) {
-		dev_err(dev->dev, "failed to get mdp_clk\n");
-		ret = PTR_ERR(mdp4_dsi_encoder->mdp_clk);
-		goto fail;
-	}
-
-*/
-	 /* TODO: different regulators in other cases? */
-/*        reg = devm_regulator_get(dev->dev, "dsi1_avdd");
-        if (IS_ERR(reg)) {
-                ret = PTR_ERR(reg);
-                dev_err(dev->dev, "failed to get dsi1_avdd: %d\n", ret);
-                goto fail;
-        }
-        mdp4_dsi_encoder->regs[0] = reg;
-
-        reg = devm_regulator_get(dev->dev, "dsi1_vddio");
-        if (IS_ERR(reg)) {
-                ret = PTR_ERR(reg);
-                dev_err(dev->dev, "failed to get dsi1_vddio: %d\n", ret);
-                goto fail;
-        }
-        mdp4_dsi_encoder->regs[1] = reg;
-
-        reg = devm_regulator_get(dev->dev, "dsi1_pll_vdda");
-        if (IS_ERR(reg)) {
-                ret = PTR_ERR(reg);
-                dev_err(dev->dev, "failed to get dsi1_pll_vdda: %d\n", ret);
-                goto fail;
-        }
-        mdp4_dsi_encoder->regs[2] = reg;
-*/
-
-
+	
 	bs_init(mdp4_dsi_encoder);
 
 	return encoder;

@@ -42,7 +42,7 @@ static void dsi_bridge_enable(struct drm_bridge *bridge)
 static void dsi_bridge_disable(struct drm_bridge *bridge)
 {
 }
-/*
+
 static void dsi_bridge_dpms(struct drm_bridge *bridge, int mode)
 {
 	struct dsi_bridge *dsi_bridge = to_dsi_bridge(bridge);
@@ -61,25 +61,10 @@ static void dsi_bridge_dpms(struct drm_bridge *bridge, int mode)
 
 	dsi_bridge->enabled = enabled;
 }
-*/
+
 static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 {
-//	dsi_bridge_dpms(bridge, DRM_MODE_DPMS_OFF);
-	struct dsi_bridge *dsi_bridge = to_dsi_bridge(bridge);
-        bool enabled = 1;
-        struct panel *panel = dsi_bridge->dsi->panel;
-
-        //DBG("mode=%d", mode);
-
-        if (enabled == dsi_bridge->enabled)
-                return;
-
-        if (enabled)
-                panel_on(panel);
-        else
-                panel_off(panel);
-
-        dsi_bridge->enabled = enabled;
+	dsi_bridge_dpms(bridge, DRM_MODE_DPMS_OFF);
 }
 
 static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
@@ -88,8 +73,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 	struct dsi *dsi = dsi_bridge->dsi;
 	dsi_write(dsi, REG_DSI_RESET, 1);
 	dsi_write(dsi, REG_DSI_RESET, 0);
-        DBG("dsi_bridge_pre_enable : vinay");
-//	dsi_bridge_dpms(bridge, DRM_MODE_DPMS_ON);
+	dsi_bridge_dpms(bridge, DRM_MODE_DPMS_ON);
 }
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,

@@ -117,7 +117,7 @@ struct drm_connector *dsi_connector_init(struct dsi *dsi)
 	connector = &dsi_connector->base;
 
 	drm_connector_init(dsi->dev, connector, &dsi_connector_funcs,
-			DRM_MODE_CONNECTOR_LVDS); // TODO DRM_MODE_CONNECTOR_DSI
+			DRM_MODE_CONNECTOR_DSI); // TODO DRM_MODE_CONNECTOR_DSI
 	drm_connector_helper_add(connector, &dsi_connector_helper_funcs);
 
 	connector->polled = DRM_CONNECTOR_POLL_HPD;
