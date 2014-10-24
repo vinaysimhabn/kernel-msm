@@ -41,7 +41,7 @@ static struct mdp4_kms *get_kms(struct drm_encoder *encoder)
 static void bs_init(struct mdp4_dsi_encoder *mdp4_dsi_encoder)
 {
 	struct drm_device *dev = mdp4_dsi_encoder->base.dev;
-	struct msm_panel_common_pdata *dsi_pdata = mdp4_find_pdata("mipi_dsi.1");
+	struct msm_panel_common_pdata *dsi_pdata = mdp4_find_pdata("mdp.0");
 
 	if (!dsi_pdata) {
 		dev_err(dev->dev, "could not find mipi_dsi pdata\n");
