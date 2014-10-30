@@ -112,7 +112,7 @@ VREG_CONSUMERS(L16) = {
 	REGULATOR_SUPPLY("cam_vaf",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0020"),
-	REGULATOR_SUPPLY("dsi1_pll_vdda",	"mdp.0"), /* MIPI DSI */
+	REGULATOR_SUPPLY("dsi1_l16",	"mdp.0"), /* MIPI DSI - this required for 6440 board*/
 };
 VREG_CONSUMERS(L17) = {
 	REGULATOR_SUPPLY("8921_l17",		NULL),

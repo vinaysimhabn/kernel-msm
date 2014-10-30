@@ -125,7 +125,7 @@ struct drm_connector *dsi_connector_init(struct dsi *dsi)
 	connector->interlace_allowed = 1;
 	connector->doublescan_allowed = 0;
 
-	drm_sysfs_connector_add(connector);
+	drm_connector_register(connector);
 	drm_mode_connector_attach_encoder(connector, dsi->encoder);
 
 	panel_install_properties(dsi->panel, &connector->base);

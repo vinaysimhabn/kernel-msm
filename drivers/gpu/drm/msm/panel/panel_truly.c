@@ -35,6 +35,7 @@ struct panel_truly {
 	struct mipi_adapter *mipi;
 	struct regulator *reg_l8_avdd;
 	struct regulator *reg_s4_iovdd;
+	struct regulator *reg_l16;
 	int pmic8821_mpp2;
 };
 #define to_panel_truly(x) container_of(x, struct panel_truly, base)
@@ -253,6 +254,12 @@ static int panel_truly_power_on(struct panel *panel)
 		goto fail1;
 	}
 
+	ret = regulator_enable(panel_truly->reg_l16);
+        if (ret) {
+                dev_err(dev->dev, "failed to enable l8: %d\n", ret);
+                goto fail1;
+        }
+
 	udelay(100);
 
 	ret = regulator_enable(panel_truly->reg_s4_iovdd);
@@ -260,7 +267,11 @@ static int panel_truly_power_on(struct panel *panel)
 		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
 	}
-
+	ret = regulator_enable(panel_truly->reg_l16);
+	if (ret) {
+		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
+		goto fail2;
+	}
 	mdelay(2);
 	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
         mdelay(1);
@@ -339,7 +350,7 @@ static int panel_truly_on(struct panel *panel)
 			{0x03, 0x0a, 0x04, 0x00, 0x20},
 		        /* timing   */
 		        {0x67, 0x16, 0x0e, 0x00, 0x38, 0x3c, 0x12, 0x19,
-	                0x18, 0x03, 0x04, 0xa0}, 
+			0x18, 0x03, 0x04, 0xa0},
 			/* phy ctrl */
 		        {0x5f, 0x00, 0x00, 0x10},
 		        /* strength */
@@ -348,7 +359,7 @@ static int panel_truly_on(struct panel *panel)
 		        /*{0x00, 0x46, 0x30, 0xc4, 0x4a, 0x01, 0x19, 0x62, 0x71, 0x0f, 0x01,
 	                0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01},*/
 		        {0x00, 0x56, 0x31, 0xda, 0x4a, 0x01, 0x19, 0x62, 0x71, 0x0f, 0x07,
-	                0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01},
+			0x00, 0x14, 0x03, 0x00, 0x02, 0x00, 0x20, 0x00, 0x01}, 
 		},
 	});
 
@@ -358,111 +369,111 @@ static int panel_truly_on(struct panel *panel)
 	});
 
 	mipi_on(mipi);
-mipi_lwrite(mipi, true, 0, write_memory1);
-mipi_lwrite(mipi, true, 0, write_memory2);
-mipi_lwrite(mipi, true, 0, write_memory3);
-mipi_lwrite(mipi, true, 0, write_memory4);
-mipi_lwrite(mipi, true, 0, write_memory5);
-mipi_lwrite(mipi, true, 0, write_memory6);
-mipi_lwrite(mipi, true, 0, write_memory7);
-mipi_lwrite(mipi, true, 0, write_memory8);
-mipi_lwrite(mipi, true, 0, write_memory9);
-mipi_lwrite(mipi, true, 0, write_memory10);
-mipi_lwrite(mipi, true, 0, write_memory11);
-mipi_lwrite(mipi, true, 0, write_memory12);
-mipi_lwrite(mipi, true, 0, write_memory13);
-mipi_lwrite(mipi, true, 0, write_memory14);
-mipi_lwrite(mipi, true, 0, write_memory15);
-mipi_lwrite(mipi, true, 0, write_memory16);
-mipi_lwrite(mipi, true, 0, write_memory17);
-mipi_lwrite(mipi, true, 0, write_memory18);
-mipi_lwrite(mipi, true, 0, write_memory19);
-mipi_lwrite(mipi, true, 0, write_memory20);
-mipi_lwrite(mipi, true, 0, write_memory21);
-mipi_lwrite(mipi, true, 0, write_memory22);
-mipi_lwrite(mipi, true, 0, write_memory23);
-mipi_lwrite(mipi, true, 0, write_memory24);
-mipi_lwrite(mipi, true, 0, write_memory25);
-mipi_lwrite(mipi, true, 0, write_memory26);
-mipi_lwrite(mipi, true, 0, write_memory27);
-mipi_lwrite(mipi, true, 0, write_memory29);
-mipi_lwrite(mipi, true, 0, write_memory30);
-mipi_lwrite(mipi, true, 0, write_memory31);
-mipi_lwrite(mipi, true, 0, write_memory32);
-mipi_lwrite(mipi, true, 0, write_memory33);
-mipi_lwrite(mipi, true, 0, write_memory34);
-mipi_lwrite(mipi, true, 0, write_memory35);
-mipi_lwrite(mipi, true, 0, write_memory36);
-mipi_lwrite(mipi, true, 0, write_memory37);
-mipi_lwrite(mipi, true, 0, write_memory38);
-mipi_lwrite(mipi, true, 0, write_memory39);
-mipi_lwrite(mipi, true, 0, write_memory40);
-mipi_lwrite(mipi, true, 0, write_memory41);
-mipi_lwrite(mipi, true, 0, write_memory42);
-mipi_lwrite(mipi, true, 0, write_memory43);
-mipi_lwrite(mipi, true, 0, write_memory44);
-mipi_lwrite(mipi, true, 0, write_memory45);
-mipi_lwrite(mipi, true, 0, write_memory46);
-mipi_lwrite(mipi, true, 0, write_memory47);
-mipi_lwrite(mipi, true, 0, write_memory48);
-mipi_lwrite(mipi, true, 0, write_memory49);
-mipi_lwrite(mipi, true, 0, write_memory50);
-mipi_lwrite(mipi, true, 0, write_memory51);
-mipi_lwrite(mipi, true, 0, write_memory52);
-mipi_lwrite(mipi, true, 0, write_memory53);
-mipi_lwrite(mipi, true, 0, write_memory54);
-mipi_lwrite(mipi, true, 0, write_memory55);
-mipi_lwrite(mipi, true, 0, write_memory56);
-mipi_lwrite(mipi, true, 0, write_memory57);
-mipi_lwrite(mipi, true, 0, write_memory58);
-mipi_lwrite(mipi, true, 0, write_memory59);
-mipi_lwrite(mipi, true, 0, write_memory60);
-mipi_lwrite(mipi, true, 0, write_memory61);
-mipi_lwrite(mipi, true, 0, write_memory62);
-mipi_lwrite(mipi, true, 0, write_memory63);
-mipi_lwrite(mipi, true, 0, write_memory64);
-mipi_lwrite(mipi, true, 0, write_memory65);
-mipi_lwrite(mipi, true, 0, write_memory66);
-mipi_lwrite(mipi, true, 0, write_memory67);
-mipi_lwrite(mipi, true, 0, write_memory68);
-mipi_lwrite(mipi, true, 0, write_memory69);
-mipi_lwrite(mipi, true, 0, write_memory70);
-mipi_lwrite(mipi, true, 0, write_memory71);
-mipi_lwrite(mipi, true, 0, write_memory72);
-mipi_lwrite(mipi, true, 0, write_memory73);
-mipi_lwrite(mipi, true, 0, write_memory74);
-mipi_lwrite(mipi, true, 0, write_memory75);
-mipi_lwrite(mipi, true, 0, write_memory76);
-mipi_lwrite(mipi, true, 0, write_memory77);
-mipi_lwrite(mipi, true, 0, write_memory78);
-mipi_lwrite(mipi, true, 0, write_memory79);
-mipi_lwrite(mipi, true, 0, write_memory80);
-mipi_lwrite(mipi, true, 0, write_memory81);
-mipi_lwrite(mipi, true, 0, write_memory82);
-mipi_lwrite(mipi, true, 0, write_memory83);
-mipi_lwrite(mipi, true, 0, write_memory84);
-mipi_lwrite(mipi, true, 0, write_memory85);
-mipi_lwrite(mipi, true, 0, write_memory86);
-mipi_lwrite(mipi, true, 0, write_memory87);
-mipi_lwrite(mipi, true, 0, write_memory88);
-mipi_lwrite(mipi, true, 0, write_memory89);
-mipi_lwrite(mipi, true, 0, write_memory90);
-mipi_lwrite(mipi, true, 0, write_memory91);
-mipi_lwrite(mipi, true, 0, write_memory92);
-mipi_lwrite(mipi, true, 0, write_memory93);
-mipi_lwrite(mipi, true, 0, write_memory94);
-mipi_lwrite(mipi, true, 0, write_memory95);
-mipi_lwrite(mipi, true, 0, write_memory96);
-mipi_lwrite(mipi, true, 0, write_memory97);
-mipi_lwrite(mipi, true, 0, write_memory98);
-mipi_lwrite(mipi, true, 0, write_memory99);
-mipi_lwrite(mipi, true, 0, write_memory100);
-mipi_lwrite(mipi, true, 0, write_memory101);
-mipi_lwrite(mipi, true, 0, write_memory102);
-mipi_lwrite(mipi, true, 0, write_memory103);
-mipi_lwrite(mipi, true, 0, write_memory104);
-mdelay(250);
-	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]);
+	mipi_lwrite(mipi, true, 0, write_memory1);
+	mipi_lwrite(mipi, true, 0, write_memory2);
+	mipi_lwrite(mipi, true, 0, write_memory3);
+	mipi_lwrite(mipi, true, 0, write_memory4);
+	mipi_lwrite(mipi, true, 0, write_memory5);
+	mipi_lwrite(mipi, true, 0, write_memory6);
+	mipi_lwrite(mipi, true, 0, write_memory7);
+	mipi_lwrite(mipi, true, 0, write_memory8);
+	mipi_lwrite(mipi, true, 0, write_memory9);
+	mipi_lwrite(mipi, true, 0, write_memory10);
+	mipi_lwrite(mipi, true, 0, write_memory11);
+	mipi_lwrite(mipi, true, 0, write_memory12);
+	mipi_lwrite(mipi, true, 0, write_memory13);
+	mipi_lwrite(mipi, true, 0, write_memory14);
+	mipi_lwrite(mipi, true, 0, write_memory15);
+	mipi_lwrite(mipi, true, 0, write_memory16);
+	mipi_lwrite(mipi, true, 0, write_memory17);
+	mipi_lwrite(mipi, true, 0, write_memory18);
+	mipi_lwrite(mipi, true, 0, write_memory19);
+	mipi_lwrite(mipi, true, 0, write_memory20);
+	mipi_lwrite(mipi, true, 0, write_memory21);
+	mipi_lwrite(mipi, true, 0, write_memory22);
+	mipi_lwrite(mipi, true, 0, write_memory23);
+	mipi_lwrite(mipi, true, 0, write_memory24);
+	mipi_lwrite(mipi, true, 0, write_memory25);
+	mipi_lwrite(mipi, true, 0, write_memory26);
+	mipi_lwrite(mipi, true, 0, write_memory27);
+	mipi_lwrite(mipi, true, 0, write_memory29);
+	mipi_lwrite(mipi, true, 0, write_memory30);
+	mipi_lwrite(mipi, true, 0, write_memory31);
+	mipi_lwrite(mipi, true, 0, write_memory32);
+	mipi_lwrite(mipi, true, 0, write_memory33);
+	mipi_lwrite(mipi, true, 0, write_memory34);
+	mipi_lwrite(mipi, true, 0, write_memory35);
+	mipi_lwrite(mipi, true, 0, write_memory36);
+	mipi_lwrite(mipi, true, 0, write_memory37);
+	mipi_lwrite(mipi, true, 0, write_memory38);
+	mipi_lwrite(mipi, true, 0, write_memory39);
+	mipi_lwrite(mipi, true, 0, write_memory40);
+	mipi_lwrite(mipi, true, 0, write_memory41);
+	mipi_lwrite(mipi, true, 0, write_memory42);
+	mipi_lwrite(mipi, true, 0, write_memory43);
+	mipi_lwrite(mipi, true, 0, write_memory44);
+	mipi_lwrite(mipi, true, 0, write_memory45);
+	mipi_lwrite(mipi, true, 0, write_memory46);
+	mipi_lwrite(mipi, true, 0, write_memory47);
+	mipi_lwrite(mipi, true, 0, write_memory48);
+	mipi_lwrite(mipi, true, 0, write_memory49);
+	mipi_lwrite(mipi, true, 0, write_memory50);
+	mipi_lwrite(mipi, true, 0, write_memory51);
+	mipi_lwrite(mipi, true, 0, write_memory52);
+	mipi_lwrite(mipi, true, 0, write_memory53);
+	mipi_lwrite(mipi, true, 0, write_memory54);
+	mipi_lwrite(mipi, true, 0, write_memory55);
+	mipi_lwrite(mipi, true, 0, write_memory56);
+	mipi_lwrite(mipi, true, 0, write_memory57);
+	mipi_lwrite(mipi, true, 0, write_memory58);
+	mipi_lwrite(mipi, true, 0, write_memory59);
+	mipi_lwrite(mipi, true, 0, write_memory60);
+	mipi_lwrite(mipi, true, 0, write_memory61);
+	mipi_lwrite(mipi, true, 0, write_memory62);
+	mipi_lwrite(mipi, true, 0, write_memory63);
+	mipi_lwrite(mipi, true, 0, write_memory64);
+	mipi_lwrite(mipi, true, 0, write_memory65);
+	mipi_lwrite(mipi, true, 0, write_memory66);
+	mipi_lwrite(mipi, true, 0, write_memory67);
+	mipi_lwrite(mipi, true, 0, write_memory68);
+	mipi_lwrite(mipi, true, 0, write_memory69);
+	mipi_lwrite(mipi, true, 0, write_memory70);
+	mipi_lwrite(mipi, true, 0, write_memory71);
+	mipi_lwrite(mipi, true, 0, write_memory72);
+	mipi_lwrite(mipi, true, 0, write_memory73);
+	mipi_lwrite(mipi, true, 0, write_memory74);
+	mipi_lwrite(mipi, true, 0, write_memory75);
+	mipi_lwrite(mipi, true, 0, write_memory76);
+	mipi_lwrite(mipi, true, 0, write_memory77);
+	mipi_lwrite(mipi, true, 0, write_memory78);
+	mipi_lwrite(mipi, true, 0, write_memory79);
+	mipi_lwrite(mipi, true, 0, write_memory80);
+	mipi_lwrite(mipi, true, 0, write_memory81);
+	mipi_lwrite(mipi, true, 0, write_memory82);
+	mipi_lwrite(mipi, true, 0, write_memory83);
+	mipi_lwrite(mipi, true, 0, write_memory84);
+	mipi_lwrite(mipi, true, 0, write_memory85);
+	mipi_lwrite(mipi, true, 0, write_memory86);
+	mipi_lwrite(mipi, true, 0, write_memory87);
+	mipi_lwrite(mipi, true, 0, write_memory88);
+	mipi_lwrite(mipi, true, 0, write_memory89);
+	mipi_lwrite(mipi, true, 0, write_memory90);
+	mipi_lwrite(mipi, true, 0, write_memory91);
+	mipi_lwrite(mipi, true, 0, write_memory92);
+	mipi_lwrite(mipi, true, 0, write_memory93);
+	mipi_lwrite(mipi, true, 0, write_memory94);
+	mipi_lwrite(mipi, true, 0, write_memory95);
+	mipi_lwrite(mipi, true, 0, write_memory96);
+	mipi_lwrite(mipi, true, 0, write_memory97);
+	mipi_lwrite(mipi, true, 0, write_memory98);
+	mipi_lwrite(mipi, true, 0, write_memory99);
+	mipi_lwrite(mipi, true, 0, write_memory100);
+	mipi_lwrite(mipi, true, 0, write_memory101);
+	mipi_lwrite(mipi, true, 0, write_memory102);
+	mipi_lwrite(mipi, true, 0, write_memory103);
+	mipi_lwrite(mipi, true, 0, write_memory104);
+	mdelay(250);
+	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]); 
         mdelay(20);
         mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
         mdelay(5);
@@ -580,6 +591,13 @@ struct panel *panel_truly_init(struct drm_device *dev,
 
 	panel_truly->reg_s4_iovdd = devm_regulator_get(dev->dev, "dsi1_s4_iovdd");
 	if (IS_ERR(panel_truly->reg_s4_iovdd)) {
+		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
+		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
+		goto fail;
+	}
+
+	panel_truly->reg_l16 = devm_regulator_get(dev->dev, "dsi1_l16");
+	if (IS_ERR(panel_truly->reg_l16)) {
 		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
 		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
 		goto fail;
