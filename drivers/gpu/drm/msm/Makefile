@@ -1,4 +1,6 @@
-ccflags-y := -Iinclude/drm -Idrivers/gpu/drm/msm -I$(src) -include reg_log.h
+ccflags-y := -Iinclude/drm -Idrivers/gpu/drm/msm 
+#ccflags-y += -I$(src) -include reg_log.h # enabled this for regulator, clock logs , cmdline = msm.reglog=y
+
 ifeq (, $(findstring -W,$(EXTRA_CFLAGS)))
 	ccflags-y += -Werror
 endif
