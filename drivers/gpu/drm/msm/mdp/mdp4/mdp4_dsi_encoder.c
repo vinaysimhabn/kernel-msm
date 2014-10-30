@@ -163,17 +163,13 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 
 	hsync_start_x = (mode->htotal - mode->hsync_start);
 	hsync_end_x = mode->htotal - (mode->hsync_start - mode->hdisplay) - 1;
-//	hsync_start_x = 49;
-  //     hsync_end_x = 529;
-       mode->htotal = 574;
-       mode->vtotal = 896;
 	
 	vsync_period = mode->vtotal * mode->htotal;
 	vsync_len = (mode->vsync_end - mode->vsync_start) * mode->htotal;
 	display_v_start = (mode->vtotal - mode->vsync_start) * mode->htotal + dsi_hsync_skew;
 	display_v_end = vsync_period - ((mode->vsync_start - mode->vdisplay) * mode->htotal) + dsi_hsync_skew - 1;
 
-/*	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,
+	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,
 			MDP4_DSI_HSYNC_CTRL_PULSEW(mode->hsync_end - mode->hsync_start) |
 			MDP4_DSI_HSYNC_CTRL_PERIOD(mode->htotal));
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_PERIOD, vsync_period);
@@ -183,7 +179,7 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 			MDP4_DSI_DISPLAY_HCTRL_END(hsync_end_x));
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VSTART, display_v_start);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VEND, display_v_end);
-*/
+
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_CTRL_POLARITY, ctrl_pol);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_UNDERFLOW_CLR,
 			MDP4_DSI_UNDERFLOW_CLR_ENABLE_RECOVERY |
@@ -195,13 +191,6 @@ static void mdp4_dsi_encoder_mode_set(struct drm_encoder *encoder,
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_BORDER_CLR, 0);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_ACTIVE_VSTART, 0);
 	mdp4_write(mdp4_kms, REG_MDP4_DSI_ACTIVE_VEND, 0);
-
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_HSYNC_CTRL,0x023e0004);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_PERIOD, 0x0007d900);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_VSYNC_LEN, 0x0000023e);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_HCTRL,0x020f0030);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VSTART, 0x0000261e);
-	mdp4_write(mdp4_kms, REG_MDP4_DSI_DISPLAY_VEND, 0x0007b75d);
 }
 
 static void mdp4_dsi_encoder_prepare(struct drm_encoder *encoder)

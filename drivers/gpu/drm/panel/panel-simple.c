@@ -484,13 +484,13 @@ static const struct drm_display_mode truly_dsi_mode = {
         .hdisplay = 480,
         .hsync_start = 480 + 46,
         .hsync_end = 480 + 46 + 4,
-        .htotal = 480 + 46 + 4,
+        .htotal = 480 + 46 + 4 + 44,
         .vdisplay = 864,
         .vsync_start = 864 + 15,
         .vsync_end = 864 + 15 + 1,
-        .vtotal = 864 + 15 + 1,
+        .vtotal = 864 + 15 + 1 + 16,
         .vrefresh = 60,
-        .flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
+        .flags = 0,
 };
 
 static const struct panel_desc truly_dsi = {

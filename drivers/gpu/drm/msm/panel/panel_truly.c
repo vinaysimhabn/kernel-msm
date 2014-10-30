@@ -514,14 +514,14 @@ static struct drm_display_mode *panel_truly_mode(struct panel *panel)
 	mode->clock = 343000;
 
 	mode->hdisplay = 480;
-	mode->hsync_start = mode->hdisplay + 46;
-	mode->hsync_end = mode->hsync_start + 4;
-	mode->htotal = mode->hsync_end ;
+	mode->hsync_start = 480 + 46;
+	mode->hsync_end = 480 + 46 + 4;
+	mode->htotal = 480 + 46 + 4 + 44;
 
 	mode->vdisplay = 864;
-	mode->vsync_start = mode->vdisplay + 15;
-	mode->vsync_end = mode->vsync_start + 1;
-	mode->vtotal = mode->vsync_end ;
+	mode->vsync_start = 864 + 15;
+	mode->vsync_end = 864 + 15 + 1;
+	mode->vtotal = 864 + 15 + 1 + 16;
 
 	mode->flags = 0;
 
