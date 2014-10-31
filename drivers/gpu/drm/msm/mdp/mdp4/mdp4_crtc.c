@@ -328,7 +328,6 @@ static void blend_setup(struct drm_crtc *crtc)
 	}
 
 	mdp4_kms->mixer_cfg = mixer_cfg;
-	mixer_cfg = 0x1900; // only RGB1, RGB2 is enabled , VG1 and VG2 are disabled (TODO)
 	mdp4_write(mdp4_kms, REG_MDP4_LAYERMIXER_IN_CFG, mixer_cfg);
 }
 

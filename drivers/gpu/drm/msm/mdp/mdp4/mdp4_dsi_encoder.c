@@ -208,7 +208,7 @@ static void mdp4_dsi_encoder_commit(struct drm_encoder *encoder)
                         MDP4_DMA_CONFIG_G_BPC(BPC8) |
                         MDP4_DMA_CONFIG_B_BPC(BPC8) |
                         MDP4_DMA_CONFIG_PACK(0x21));
-        mdp4_crtc_set_intf(encoder->crtc, INTF_DSI_VIDEO,1);
+        mdp4_crtc_set_intf(encoder->crtc, INTF_DSI_VIDEO,0);
 
 	mdp4_dsi_encoder_dpms(encoder, DRM_MODE_DPMS_ON);
 }
