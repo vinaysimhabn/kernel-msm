@@ -511,7 +511,7 @@ static struct drm_display_mode *panel_truly_mode(struct panel *panel)
 
 	snprintf(mode->name, sizeof(mode->name), "480x864");
 
-	mode->clock = 343000;
+	mode->clock = 30780;
 
 	mode->hdisplay = 480;
 	mode->hsync_start = 480 + 46;
