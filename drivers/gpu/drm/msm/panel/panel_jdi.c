@@ -30,7 +30,7 @@
 #define PM8821_MPP_BASE                 (PM8921_MPP_BASE + PM8921_NR_MPPS)
 #define PM8821_MPP_PM_TO_SYS(pm_mpp)    (pm_mpp - 1 + PM8821_MPP_BASE)
 
-struct panel_truly {
+struct panel_jdi {
 	struct panel base;
 	struct mipi_adapter *mipi;
 	struct regulator *reg_l8_avdd;
@@ -38,10 +38,16 @@ struct panel_truly {
 	struct regulator *reg_l16;
 	int pmic8821_mpp2;
 };
-#define to_panel_truly(x) container_of(x, struct panel_truly, base)
+#define to_panel_jdi(x) container_of(x, struct panel_jdi, base)
 
 static char enter_sleep[2] = {0x10, 0x00};
+static char dsi_on[45] = {0x15, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x55, 0x00,
+			0x15, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x53, 0x2C,
+			0x15, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x35, 0x00,
+			0x05, 0x01, 0x00, 0x00, 0x78, 0x00, 0x02, 0x29, 0x00,
+			0x05, 0x01, 0x00, 0x00, 0x78, 0x00, 0x02, 0x11, 0x00};
 /*************************** IC for AUO 4' MIPI * 480RGBx854************/
+/*
 static char write_memory1[4]={0xFF,0x80,0x09,0x01};//Enable EXTC
 static char write_memory2[2]={0x00,0x80};//Shift address
 static char write_memory3[3]={0xFF,0x80,0x09};	 //Enable Orise mode
@@ -218,43 +224,44 @@ static char write_memory102[2]={0xCC, 0x0A};
 
 static char write_memory103[2]={0x00, 0xD1};
 static char write_memory104[2]={0xCC, 0x06};
+*/
 //-------------------- sleep out --------------------//
 static char write_memory105[1]={0x11};
 //delay1m{200};
 
 static char write_memory106[1]={0x29};
 
-static void panel_truly_destroy(struct panel *panel)
+static void panel_jdi_destroy(struct panel *panel)
 {
-	struct panel_truly *panel_truly = to_panel_truly(panel);
-	kfree(panel_truly);
+	struct panel_jdi *panel_jdi = to_panel_jdi(panel);
+	kfree(panel_jdi);
 }
 
-static int panel_truly_power_on(struct panel *panel)
+static int panel_jdi_power_on(struct panel *panel)
 {
 	struct drm_device *dev = panel->dev;
-	struct panel_truly *panel_truly = to_panel_truly(panel);
+	struct panel_jdi *panel_jdi = to_panel_jdi(panel);
 	int ret = 0;
 
-	ret = regulator_set_optimum_mode(panel_truly->reg_l8_avdd, 110000);
+	ret = regulator_set_optimum_mode(panel_jdi->reg_l8_avdd, 110000);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to set l8 mode: %d\n", ret);
 		goto fail1;
 	}
 
-	ret = regulator_set_optimum_mode(panel_truly->reg_s4_iovdd, 100000);
+	ret = regulator_set_optimum_mode(panel_jdi->reg_s4_iovdd, 100000);
 	if (ret < 0) {
 		dev_err(dev->dev, "failed to set s4 mode: %d\n", ret);
 		goto fail2;
 	}
 
-	ret = regulator_enable(panel_truly->reg_l8_avdd);
+	ret = regulator_enable(panel_jdi->reg_l8_avdd);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable l8: %d\n", ret);
 		goto fail1;
 	}
 
-	ret = regulator_enable(panel_truly->reg_l16);
+	ret = regulator_enable(panel_jdi->reg_l16);
         if (ret) {
                 dev_err(dev->dev, "failed to enable l8: %d\n", ret);
                 goto fail1;
@@ -262,64 +269,65 @@ static int panel_truly_power_on(struct panel *panel)
 
 	udelay(100);
 
-	ret = regulator_enable(panel_truly->reg_s4_iovdd);
+	ret = regulator_enable(panel_jdi->reg_s4_iovdd);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
 	}
-	ret = regulator_enable(panel_truly->reg_l16);
+	ret = regulator_enable(panel_jdi->reg_l16);
 	if (ret) {
 		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
 	}
 	mdelay(2);
-	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
+	gpio_set_value_cansleep(panel_jdi->pmic8821_mpp2, 1);
         mdelay(1);
-        gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
+        gpio_set_value_cansleep(panel_jdi->pmic8821_mpp2, 0);
         usleep(50);
-        gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
+        gpio_set_value_cansleep(panel_jdi->pmic8821_mpp2, 1);
 
 	return 0;
 
 fail2:
-	regulator_disable(panel_truly->reg_s4_iovdd);
+	regulator_disable(panel_jdi->reg_s4_iovdd);
 fail1:
-	regulator_disable(panel_truly->reg_l8_avdd);
+	regulator_disable(panel_jdi->reg_l8_avdd);
 	
 	return ret;
 }
 
-static int panel_truly_power_off(struct panel *panel)
+static int panel_jdi_power_off(struct panel *panel)
 {
 	struct drm_device *dev = panel->dev;
-	struct panel_truly *panel_truly = to_panel_truly(panel);
+	struct panel_jdi *panel_jdi = to_panel_jdi(panel);
 	int ret;
 
-	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
+	gpio_set_value_cansleep(panel_jdi->pmic8821_mpp2, 0);
 	udelay(100);
 
-	ret = regulator_disable(panel_truly->reg_l8_avdd);
+	ret = regulator_disable(panel_jdi->reg_l8_avdd);
 	if (ret)
 		dev_err(dev->dev, "failed to disable l8: %d\n", ret);
 
 	udelay(100);
 
-	ret = regulator_disable(panel_truly->reg_s4_iovdd);
+	ret = regulator_disable(panel_jdi->reg_s4_iovdd);
 	if (ret)
 		dev_err(dev->dev, "failed to disable s4: %d\n", ret);
 
 	return 0;
 }
 
-static int panel_truly_on(struct panel *panel)
+static int panel_jdi_on(struct panel *panel)
 {
-	struct panel_truly *panel_truly = to_panel_truly(panel);
-	struct mipi_adapter *mipi = panel_truly->mipi;
+	struct panel_jdi *panel_jdi = to_panel_jdi(panel);
+	struct mipi_adapter *mipi = panel_jdi->mipi;
 	int ret = 0;
+	int i = 0;
 
 	DRM_DEBUG_KMS("panel on\n");
 
-	ret = panel_truly_power_on(panel);
+	ret = panel_jdi_power_on(panel);
 	if (ret)
 		return ret;
 
@@ -339,7 +347,7 @@ static int panel_truly_on(struct panel *panel)
 		.mdp_trigger = TRIGGER_NONE,
 		.te = false,
 		.dlane_swap = 0,
-		.t_clk_pre = 0x1c,
+		.t_clk_pre = 0x1b,
 		.t_clk_post = 0x04,
 		.rx_eot_ignore = false,
 		.tx_eot_append = true,
@@ -349,10 +357,10 @@ static int panel_truly_on(struct panel *panel)
 			/* regulator */
 			{0x03, 0x0a, 0x04, 0x00, 0x20},
 		        /* timing   */
-		        {0x67, 0x16, 0x0e, 0x00, 0x38, 0x3c, 0x12, 0x19,
-			0x18, 0x03, 0x04, 0xa0},
+		        {0xe1, 0x37, 0x25, 0x00, 0x67, 0x6b, 0x2a, 0x3a,
+			0x59, 0x03, 0x04, 0xa0},
 			/* phy ctrl */
-		        {0x5f, 0x00, 0x00, 0x10},
+		        {0x5f, 0xa2, 0x01, 0x19},
 		        /* strength */
 		        {0xff, 0x00, 0x06, 0x00},
 		        /* pll control */
@@ -365,11 +373,11 @@ static int panel_truly_on(struct panel *panel)
 
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
 		.low_power = false,
-		.lanes = 0x3,
+		.lanes = 0xf,
 	});
 
 	mipi_on(mipi);
-	mipi_lwrite(mipi, true, 0, write_memory1);
+/*	mipi_lwrite(mipi, true, 0, write_memory1);
 	mipi_lwrite(mipi, true, 0, write_memory2);
 	mipi_lwrite(mipi, true, 0, write_memory3);
 	mipi_lwrite(mipi, true, 0, write_memory4);
@@ -472,25 +480,33 @@ static int panel_truly_on(struct panel *panel)
 	mipi_lwrite(mipi, true, 0, write_memory102);
 	mipi_lwrite(mipi, true, 0, write_memory103);
 	mipi_lwrite(mipi, true, 0, write_memory104);
-	mdelay(250);
+	mdelay(250);*/
+
+	if(0){	
+	for(i=0; i <= 45; i++)
+	{
+		mipi_dcs_swrite(mipi, true, 0, false,dsi_on[i]); 
+		i++;
+        	mdelay(5);
+	}}
 	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]); 
         mdelay(20);
         mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
         mdelay(5);
-
+	
 	return 0;
 }
 
-static int panel_truly_off(struct panel *panel)
+static int panel_jdi_off(struct panel *panel)
 {
-	struct panel_truly *panel_truly = to_panel_truly(panel);
-	struct mipi_adapter *mipi = panel_truly->mipi;
+	struct panel_jdi *panel_jdi = to_panel_jdi(panel);
+	struct mipi_adapter *mipi = panel_jdi->mipi;
 	int ret;
 
 	DRM_DEBUG_KMS("panel off\n");
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
 		.low_power = true,
-		.lanes = 0x3,
+		.lanes = 0xf,
 	});
 
 	mipi_dcs_swrite(mipi, true, 0, false, enter_sleep[0]);
@@ -498,52 +514,44 @@ static int panel_truly_off(struct panel *panel)
 
 	mipi_off(mipi);
 
-	ret = panel_truly_power_off(panel);
+	ret = panel_jdi_power_off(panel);
 	if (ret)
 		return ret;
 
 	return 0;
 }
 
-static struct drm_display_mode *panel_truly_mode(struct panel *panel)
+static struct drm_display_mode *panel_jdi_mode(struct panel *panel)
 {
 	struct drm_display_mode *mode = drm_mode_create(panel->dev);
-	u32 hbp, hfp, vbp, vfp, hspw, vspw;
 
-	snprintf(mode->name, sizeof(mode->name), "480x864");
+	snprintf(mode->name, sizeof(mode->name), "1080x1920");
 
-	mode->clock = 30780;
+	mode->clock = 145040;
 
-        hbp = 44;
-        hfp = 46;
-        vbp = 16;
-        vfp = 15;
-        hspw = 4;
-        vspw = 1;
+	mode->hdisplay = 1080;
+	mode->hsync_start = mode->hdisplay + 64;
+	mode->hsync_end = mode->hsync_start + 16;
+	mode->htotal = mode->hsync_end + 96;
 
-	mode->hdisplay = 480;
-	mode->hsync_start = mode->hdisplay + hbp;
-	mode->hsync_end = mode->hsync_start + hspw;
-	mode->htotal = mode->hsync_end + hbp;
-
-	mode->vdisplay = 864;
-	mode->vsync_start = mode->vdisplay + vfp;
-	mode->vsync_end = mode->vsync_start + vspw;
-	mode->vtotal = mode->vsync_end + vbp;
+	mode->vdisplay = 1920;
+	mode->vsync_start = mode->vdisplay + 3;
+	mode->vsync_end = mode->vsync_start + 1;
+	mode->vtotal = mode->vsync_end + 4;
 
 	mode->flags = 0;
 
 	return mode;
 }
 
-static const struct panel_funcs panel_truly_funcs = {
-		.destroy = panel_truly_destroy,
-		.on = panel_truly_on,
-		.off = panel_truly_off,
-		.mode = panel_truly_mode,
+static const struct panel_funcs panel_jdi_funcs = {
+		.destroy = panel_jdi_destroy,
+		.on = panel_jdi_on,
+		.off = panel_jdi_off,
+		.mode = panel_jdi_mode,
 };
 
-struct panel *panel_truly_init(struct drm_device *dev,
+struct panel *panel_jdi_init(struct drm_device *dev,
 		// XXX uggg.. maybe we should just pass in a config structure
 		// pre-populated with regulators, gpio's, etc??  the panel
 		// needs the drm device, but we need the pdev to lookup the
@@ -552,20 +560,20 @@ struct panel *panel_truly_init(struct drm_device *dev,
 		struct platform_device *pdev,
 		struct mipi_adapter *mipi)
 {
-	struct panel_truly *panel_truly;
+	struct panel_jdi *panel_jdi;
 	struct panel *panel = NULL;
 	int ret;
 
-	panel_truly = kzalloc(sizeof(*panel_truly), GFP_KERNEL);
-	if (!panel_truly) {
+	panel_jdi = kzalloc(sizeof(*panel_jdi), GFP_KERNEL);
+	if (!panel_jdi) {
 		ret = -ENOMEM;
 		goto fail;
 	}
 
-	panel_truly->mipi = mipi;
+	panel_jdi->mipi = mipi;
 
-	panel = &panel_truly->base;
-	ret = panel_init(dev, panel, &panel_truly_funcs);
+	panel = &panel_jdi->base;
+	ret = panel_init(dev, panel, &panel_jdi_funcs);
 	if (ret)
 		goto fail;
 
@@ -574,50 +582,50 @@ struct panel *panel_truly_init(struct drm_device *dev,
 	 * uses the same panel.
 	 */
 
-	panel_truly->pmic8821_mpp2 = PM8821_MPP_PM_TO_SYS(2);
-	ret = gpio_request(panel_truly->pmic8821_mpp2, "disp_rst_n");
+	panel_jdi->pmic8821_mpp2 = PM8821_MPP_PM_TO_SYS(2);
+	ret = gpio_request(panel_jdi->pmic8821_mpp2, "disp_rst_n");
 	if (ret) {
 		dev_err(dev->dev, "failed to request disp_rst_n mpp: %d\n", ret);
 		goto fail;
 	}
-	ret = gpio_export(panel_truly->pmic8821_mpp2, true);
+	ret = gpio_export(panel_jdi->pmic8821_mpp2, true);
 	if (ret) {
 		dev_err(dev->dev, "failed to request gpio export mpp: %d\n", ret);
 		goto fail;
 	}
-	ret = gpio_direction_output(panel_truly->pmic8821_mpp2, 0);
+	ret = gpio_direction_output(panel_jdi->pmic8821_mpp2, 0);
 	if (ret) {
 		dev_err(dev->dev, "failed to request gpio direction output mpp: %d\n", ret);
 		goto fail;
 	}
-	panel_truly->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
-	if (IS_ERR(panel_truly->reg_l8_avdd)) {
-		ret = PTR_ERR(panel_truly->reg_l8_avdd);
+	panel_jdi->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
+	if (IS_ERR(panel_jdi->reg_l8_avdd)) {
+		ret = PTR_ERR(panel_jdi->reg_l8_avdd);
 		dev_err(dev->dev, "failed to request dsi_avdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_truly->reg_s4_iovdd = devm_regulator_get(dev->dev, "dsi1_s4_iovdd");
-	if (IS_ERR(panel_truly->reg_s4_iovdd)) {
-		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
+	panel_jdi->reg_s4_iovdd = devm_regulator_get(dev->dev, "dsi1_s4_iovdd");
+	if (IS_ERR(panel_jdi->reg_s4_iovdd)) {
+		ret = PTR_ERR(panel_jdi->reg_s4_iovdd);
 		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_truly->reg_l16 = devm_regulator_get(dev->dev, "dsi1_l16");
-	if (IS_ERR(panel_truly->reg_l16)) {
-		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
+	panel_jdi->reg_l16 = devm_regulator_get(dev->dev, "dsi1_l16");
+	if (IS_ERR(panel_jdi->reg_l16)) {
+		ret = PTR_ERR(panel_jdi->reg_s4_iovdd);
 		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_truly->reg_l8_avdd,  3300000, 3300000);
+	ret = regulator_set_voltage(panel_jdi->reg_l8_avdd,  3300000, 3300000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l8 failed: %d\n", ret);
 		goto fail;
 	}
 
-	ret = regulator_set_voltage(panel_truly->reg_s4_iovdd,  1800000, 1800000);
+	ret = regulator_set_voltage(panel_jdi->reg_s4_iovdd,  1800000, 1800000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l2 failed: %d\n", ret);
 		goto fail;
@@ -627,6 +635,6 @@ struct panel *panel_truly_init(struct drm_device *dev,
 	return panel;
 fail:
 	if (panel)
-		panel_truly_destroy(panel);
+		panel_jdi_destroy(panel);
 	return ERR_PTR(ret);
 }
