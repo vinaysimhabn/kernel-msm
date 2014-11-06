@@ -182,6 +182,17 @@ static inline int mipi_read(struct mipi_adapter *mipi,
 		mipi_write(mipi, (u8 *)__buf, sizeof(__buf));               \
 	})
 
+#define __mipi_gen_write(mipi, htype, last, vc, payload) ({         \
+		u32 __buf[1];                                               \
+		__buf[0] = 0;                                               \
+                __buf[0] |= DSI_HDR_VC(vc);                                 \
+                __buf[0] |= DSI_HDR_DTYPE(htype);                           \
+                if (last) __buf[0] |= DSI_HDR_LAST;                         \
+		__buf[0] |= DSI_HDR_DATA1(payload[0]);                             \
+		__buf[0] |= DSI_HDR_DATA2(payload[1]);                               \
+                mipi_write(mipi, (u8 *)__buf, sizeof(__buf));               \
+        })
+
 #define __mipi_swrite(mipi, htype, last, vc, ack, val) ({           \
 		u32 __buf[1];                                               \
 		__buf[0]  = DSI_HDR_VC(vc);                                 \
@@ -196,6 +207,10 @@ static inline int mipi_read(struct mipi_adapter *mipi,
 /* long-packet write: */
 #define mipi_lwrite(mipi, last, vc, payload) \
 	__mipi_lwrite(mipi, DTYPE_GEN_LWRITE, last, vc, payload)
+
+/* GEN2_Write packet write: */
+#define mipi_gen_write(mipi, last, vc, payload) \
+	__mipi_gen_write(mipi, DTYPE_GEN_WRITE2, last, vc, payload)
 
 /* dsc short-packet write: */
 #define mipi_dcs_swrite(mipi, last, vc, ack, val) \
