@@ -955,7 +955,6 @@ static const struct component_master_ops msm_drm_ops = {
 static int msm_pdev_probe(struct platform_device *pdev)
 {
 	struct component_match *match = NULL;
-	printk("vinay msm_pdev_probe \n");
 #ifdef CONFIG_OF
 	add_components(&pdev->dev, &match, "connectors");
 	add_components(&pdev->dev, &match, "gpus");

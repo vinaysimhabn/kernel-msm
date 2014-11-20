@@ -270,7 +270,6 @@ static int dsi_dev_probe(struct platform_device *pdev)
 	pdev->dev.platform_data = &config;
 	dsi_pdev = pdev;
 
-	printk(" vinay dsi_dev probe *****\n");
 	return 0;
 }
 
@@ -280,10 +279,17 @@ static int dsi_dev_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id dt_match[] = {
+        { .compatible = "qcom,mdss-dsi-ctrl" },
+        {}
+};
 static struct platform_driver dsi_driver = {
 	.probe = dsi_dev_probe,
 	.remove = dsi_dev_remove,
-	.driver.name = "mipi_dsi",
+	.driver = {
+                .name = "mipi_dsi",
+                .of_match_table = dt_match,
+        },
 };
 
 void __init dsi_register(void)
