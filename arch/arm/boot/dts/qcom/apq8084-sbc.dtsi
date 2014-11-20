@@ -101,7 +101,8 @@
 };
 
 &mdss_mdp {
-	qcom,mdss-pref-prim-intf = "hdmi";
+/*	qcom,mdss-pref-prim-intf = "hdmi";*/
+	qcom,mdss-pref-prim-intf = "dsi";
 };
 
 &mdss_hdmi_tx {
@@ -114,6 +115,17 @@
 	qcom,enable-load = <0 0 300000 0>;
 	qcom,disable-load = <0 0 0 0>;
 	status = "ok";
+};
+
+#include "dsi-panel-otm8018b-fwvga-video.dtsi"
+
+&mdss_dsi0 {
+	qcom,primary_panel = <1>;
+	qcom,dsi-pref-prim-pan = <&dsi_otm8018b_fwvga_vid>;
+	qcom,platform-te-gpio = <&msmgpio 12 0>;
+	qcom,platform-reset-gpio = <&msmgpio 96 0>;
+	qcom,platform-enable-gpio = <&msmgpio 27 0>;
+	qcom,platform-bklight-en-gpio = <&msmgpio 86 0>;
 };
 
 &uart6 {

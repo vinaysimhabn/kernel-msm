@@ -955,6 +955,7 @@ static const struct component_master_ops msm_drm_ops = {
 static int msm_pdev_probe(struct platform_device *pdev)
 {
 	struct component_match *match = NULL;
+	printk("vinay msm_pdev_probe \n");
 #ifdef CONFIG_OF
 	add_components(&pdev->dev, &match, "connectors");
 	add_components(&pdev->dev, &match, "gpus");
@@ -965,7 +966,7 @@ static int msm_pdev_probe(struct platform_device *pdev)
 	 * care about apq8064/apq8060/etc (all mdp4/a3xx):
 	 */
 	static const char *devnames[] = {
-			"hdmi_msm.0", "kgsl-3d0.0",
+			"hdmi_msm.0", "kgsl-3d0.0", "mipi_dsi.0"
 	};
 	int i;
 
@@ -1023,6 +1024,7 @@ static struct platform_driver msm_platform_driver = {
 static int __init msm_drm_register(void)
 {
 	DBG("init");
+	dsi_register();
 	hdmi_register();
 	adreno_register();
 	return platform_driver_register(&msm_platform_driver);
@@ -1032,6 +1034,7 @@ static void __exit msm_drm_unregister(void)
 {
 	DBG("fini");
 	platform_driver_unregister(&msm_platform_driver);
+	dsi_unregister();
 	hdmi_unregister();
 	adreno_unregister();
 }

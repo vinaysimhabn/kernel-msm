@@ -313,7 +313,6 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 		}
 		priv->crtcs[priv->num_crtcs++] = crtc;
 	}
-
 	/* Construct encoder for HDMI: */
 	encoder = mdp5_encoder_init(dev, 3, INTF_HDMI);
 	if (IS_ERR(encoder)) {
@@ -321,7 +320,6 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 		ret = PTR_ERR(encoder);
 		goto fail;
 	}
-
 	/* NOTE: the vsync and error irq's are actually associated with
 	 * the INTF/encoder.. the easiest way to deal with this (ie. what
 	 * we do now) is assume a fixed relationship between crtc's and
@@ -343,6 +341,25 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 			goto fail;
 		}
 	}
+	/* Construct encoder for DSI: */
+	encoder = mdp5_encoder_init(dev, 1, INTF_DSI);
+	if (IS_ERR(encoder)) {
+		dev_err(dev->dev, "failed to construct encoder\n");
+		ret = PTR_ERR(encoder);
+		goto fail;
+	}
+	encoder->possible_crtcs =  1 << priv->num_crtcs;
+        mdp5_crtc_set_intf(priv->crtcs[0], 1, INTF_DSI);
+
+        priv->encoders[priv->num_encoders++] = encoder;
+
+	/* Construct bridge/connector for DSI: */
+
+        ret = dsi_init(dev, encoder);
+        if (ret) {
+               dev_err(dev->dev, "failed to initialize DSI: %d\n", ret);
+               goto fail;
+        }
 
 	return 0;
 
