@@ -49,6 +49,7 @@ struct dsi {
 	struct clk *m_pclk;
 	struct clk *s_pclk;
 	struct clk *amp_pclk;
+	struct clk *pixel_clk;
 
 	struct panel *panel;
 	struct dsi_phy *phy;
@@ -65,6 +66,13 @@ struct dsi {
 /* platform config data (ie. from DT, or pdata) */
 struct dsi_platform_config {
 	struct dsi_phy *(*phy_init)(struct dsi *dsi);
+
+	const char *mmio_dsi_ctrl;
+	const char *mmio_dsi_phy;
+	const char *mmio_dsi_mmss_misc_phys;
+
+	/* gpio's: */
+        int backlight_gpio, lcdreset_gpio, te_gpio;
 };
 
 struct panel *dsi_panel(struct dsi *dsi);

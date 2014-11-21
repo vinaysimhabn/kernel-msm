@@ -16,6 +16,26 @@
  */
 
 #include "dsi.h"
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
+
+#ifdef CONFIG_OF
+static int get_gpio(struct device *dev, struct device_node *of_node, const char *name)
+{
+        int gpio = of_get_named_gpio(of_node, name, 0);
+        if (gpio < 0) {
+                char name2[32];
+                snprintf(name2, sizeof(name2), "%s-gpio", name);
+                gpio = of_get_named_gpio(of_node, name2, 0);
+                if (gpio < 0) {
+                        dev_err(dev, "failed to get gpio: %s (%d)\n",
+                                        name, gpio);
+                        gpio = -1;
+                }
+        }
+        return gpio;
+}
+#endif
 
 static struct platform_device *dsi_pdev;
 
@@ -128,36 +148,36 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 		goto fail;
 	}
 
-	dsi->mmio = msm_ioremap(pdev, "mipi_dsi", "DSI");
+	dsi->mmio = msm_ioremap(pdev, config->mmio_dsi_ctrl, "DSI");
 	if (IS_ERR(dsi->mmio)) {
 		ret = PTR_ERR(dsi->mmio);
 		goto fail;
 	}
 
-	dsi->sfpb = msm_ioremap(pdev, "mmss_sfpb", "SFPB");
+	dsi->sfpb = msm_ioremap(pdev, config->mmio_dsi_phy , "DSIPHY");
 	if (IS_ERR(dsi->sfpb))
 		dsi->sfpb = NULL;
 
-	dsi->cc = msm_ioremap(pdev, "mmss_cc", "MMSS_CC");
+	dsi->cc = msm_ioremap(pdev, config->mmio_dsi_mmss_misc_phys , "MMSS_CC");
 	if (IS_ERR(dsi->cc))
 		dsi->cc = NULL;
 	DBG("mmio=%p, sfpb=%p, cc=%p", dsi->mmio, dsi->sfpb, dsi->cc);
 
-	dsi->amp_pclk = devm_clk_get(&pdev->dev, "arb_clk");
+	dsi->amp_pclk = devm_clk_get(&pdev->dev, "mdp_core_clk");
 	if (IS_ERR(dsi->amp_pclk)) {
 		ret = PTR_ERR(dsi->amp_pclk);
 		dev_err(dev->dev, "failed to get 'amp_pclk': %d\n", ret);
 		goto fail;
 	}
 
-	dsi->m_pclk = devm_clk_get(&pdev->dev, "master_iface_clk");
+	dsi->m_pclk = devm_clk_get(&pdev->dev, "iface_clk");
 	if (IS_ERR(dsi->m_pclk)) {
 		ret = PTR_ERR(dsi->m_pclk);
 		dev_err(dev->dev, "failed to get 'm_pclk': %d\n", ret);
 		goto fail;
 	}
 
-	dsi->s_pclk = devm_clk_get(&pdev->dev, "slave_iface_clk");
+	dsi->s_pclk = devm_clk_get(&pdev->dev, "bus_clk");
 	if (IS_ERR(dsi->s_pclk)) {
 		ret = PTR_ERR(dsi->s_pclk);
 		dev_err(dev->dev, "failed to get 's_pclk': %d\n", ret);
@@ -171,12 +191,20 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 		goto fail;
 	}
 
-	dsi->esc_clk = devm_clk_get(&pdev->dev, "esc_clk");
+	dsi->esc_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(dsi->esc_clk)) {
 		ret = PTR_ERR(dsi->esc_clk);
 		dev_err(dev->dev, "failed to get 'esc_clk': %d\n", ret);
 		goto fail;
 	}
+	
+	dsi->pixel_clk = devm_clk_get(&pdev->dev, "pixel_clk");
+	if (IS_ERR(dsi->esc_clk)) {
+		ret = PTR_ERR(dsi->esc_clk);
+		dev_err(dev->dev, "failed to get 'pixel_clk': %d\n", ret);
+		goto fail;
+	}
+
 
 	dsi->mipi = dsi_mipi_init(dsi);
 	if (IS_ERR(dsi->mipi)) {
@@ -214,7 +242,8 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 
 	dsi_write(dsi, REG_DSI_INTR_CTRL, 0);
 
-	dsi->irq = platform_get_irq(pdev, 0);
+	dsi->irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
+	//dsi->irq = platform_get_irq(pdev, 0);
 	if (dsi->irq < 0) {
 		ret = dsi->irq;
 		dev_err(dev->dev, "failed to get irq: %d\n", ret);
@@ -256,9 +285,17 @@ fail:
 static int dsi_dev_probe(struct platform_device *pdev)
 {
 	static struct dsi_platform_config config = {};
+	struct device *dev = &pdev->dev;
 #ifdef CONFIG_OF
+	struct device_node *of_node = pdev->dev.of_node;
 	/* TODO */
-		config.phy_init = dsi_phy_8960_init;
+	config.phy_init = dsi_phy_8960_init;
+	config.mmio_dsi_ctrl = "dsi_ctrl";
+        config.mmio_dsi_phy = "dsi_phy";
+        config.mmio_dsi_mmss_misc_phys = "mmss_misc_phys";
+	config.backlight_gpio = get_gpio(dev, of_node, "platform-bklight-en-gpio");
+	config.lcdreset_gpio = get_gpio(dev, of_node, "platform-reset-gpio");
+	config.te_gpio = get_gpio(dev, of_node, "platform-te-gpio");
 #else
 	if (cpu_is_apq8064() || cpu_is_msm8960())
 		config.phy_init = dsi_phy_8960_init;

@@ -35,8 +35,8 @@ struct panel_truly {
 	struct mipi_adapter *mipi;
 	struct regulator *reg_l8_avdd;
 	struct regulator *reg_s4_iovdd;
-	struct regulator *reg_l16;
 	int pmic8821_mpp2;
+	int backlight;
 };
 #define to_panel_truly(x) container_of(x, struct panel_truly, base)
 
@@ -254,12 +254,6 @@ static int panel_truly_power_on(struct panel *panel)
 		goto fail1;
 	}
 
-	ret = regulator_enable(panel_truly->reg_l16);
-        if (ret) {
-                dev_err(dev->dev, "failed to enable l8: %d\n", ret);
-                goto fail1;
-        }
-
 	udelay(100);
 
 	ret = regulator_enable(panel_truly->reg_s4_iovdd);
@@ -267,12 +261,8 @@ static int panel_truly_power_on(struct panel *panel)
 		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
 	}
-	ret = regulator_enable(panel_truly->reg_l16);
-	if (ret) {
-		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
-		goto fail2;
-	}
 	mdelay(2);
+	gpio_set_value_cansleep(panel_truly->backlight, 1);
 	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
         mdelay(1);
         gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
@@ -283,6 +273,7 @@ static int panel_truly_power_on(struct panel *panel)
 
 fail2:
 	regulator_disable(panel_truly->reg_s4_iovdd);
+
 fail1:
 	regulator_disable(panel_truly->reg_l8_avdd);
 	
@@ -293,9 +284,10 @@ static int panel_truly_power_off(struct panel *panel)
 {
 	struct drm_device *dev = panel->dev;
 	struct panel_truly *panel_truly = to_panel_truly(panel);
-	int ret;
+	int ret = 0;
 
 	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
+	gpio_set_value_cansleep(panel_truly->backlight, 0);
 	udelay(100);
 
 	ret = regulator_disable(panel_truly->reg_l8_avdd);
@@ -308,7 +300,7 @@ static int panel_truly_power_off(struct panel *panel)
 	if (ret)
 		dev_err(dev->dev, "failed to disable s4: %d\n", ret);
 
-	return 0;
+	return ret;
 }
 
 static int panel_truly_on(struct panel *panel)
@@ -559,6 +551,7 @@ struct panel *panel_truly_init(struct drm_device *dev,
 	struct panel_truly *panel_truly;
 	struct panel *panel = NULL;
 	int ret;
+	//struct dsi_platform_config *config = pdev->dev.platform_data;
 
 	panel_truly = kzalloc(sizeof(*panel_truly), GFP_KERNEL);
 	if (!panel_truly) {
@@ -577,8 +570,18 @@ struct panel *panel_truly_init(struct drm_device *dev,
 	 * but we can sort that out when there is some other device that
 	 * uses the same panel.
 	 */
-
+	panel_truly->backlight = 86;
+	//panel_truly->backlight = config->backlight_gpio;
+	ret = gpio_request(panel_truly->backlight, "disp_backlight");
+	if (ret) {
+		dev_err(dev->dev, "failed to request backlight: %d\n", ret);
+		goto fail;
+	}
+	gpio_export(panel_truly->backlight, true);
+	gpio_direction_output(panel_truly->backlight, 1);
+	
 	panel_truly->pmic8821_mpp2 = 96;
+	//panel_truly->pmic8821_mpp2 = config->lcdreset_gpio;
 	ret = gpio_request(panel_truly->pmic8821_mpp2, "disp_rst_n");
 	if (ret) {
 		dev_err(dev->dev, "failed to request disp_rst_n mpp: %d\n", ret);
@@ -594,28 +597,21 @@ struct panel *panel_truly_init(struct drm_device *dev,
 		dev_err(dev->dev, "failed to request gpio direction output mpp: %d\n", ret);
 		goto fail;
 	}
-	panel_truly->reg_l8_avdd = devm_regulator_get(dev->dev, "dsi1_avdd");
+	panel_truly->reg_l8_avdd = devm_regulator_get(dev->dev, "8084_l18");
 	if (IS_ERR(panel_truly->reg_l8_avdd)) {
 		ret = PTR_ERR(panel_truly->reg_l8_avdd);
 		dev_err(dev->dev, "failed to request dsi_avdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_truly->reg_s4_iovdd = devm_regulator_get(dev->dev, "dsi1_s4_iovdd");
+	panel_truly->reg_s4_iovdd = devm_regulator_get(dev->dev, "8084_s4");
 	if (IS_ERR(panel_truly->reg_s4_iovdd)) {
 		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
 		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
 		goto fail;
 	}
 
-	panel_truly->reg_l16 = devm_regulator_get(dev->dev, "dsi1_l16");
-	if (IS_ERR(panel_truly->reg_l16)) {
-		ret = PTR_ERR(panel_truly->reg_s4_iovdd);
-		dev_err(dev->dev, "failed to request dsi_s4_iovdd regulator: %d\n", ret);
-		goto fail;
-	}
-
-	ret = regulator_set_voltage(panel_truly->reg_l8_avdd,  3300000, 3300000);
+	ret = regulator_set_voltage(panel_truly->reg_l8_avdd,  2850000, 2850000);
 	if (ret) {
 		dev_err(dev->dev, "set_voltage l8 failed: %d\n", ret);
 		goto fail;
@@ -623,7 +619,7 @@ struct panel *panel_truly_init(struct drm_device *dev,
 
 	ret = regulator_set_voltage(panel_truly->reg_s4_iovdd,  1800000, 1800000);
 	if (ret) {
-		dev_err(dev->dev, "set_voltage l2 failed: %d\n", ret);
+		dev_err(dev->dev, "set_voltage lvs1 failed: %d\n", ret);
 		goto fail;
 	}
 

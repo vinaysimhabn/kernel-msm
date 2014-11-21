@@ -51,6 +51,7 @@ void dsi_clk_prepare(struct dsi *dsi)
 	clk_prepare(dsi->s_pclk);
 	clk_prepare(dsi->byte_div_clk);
 	clk_prepare(dsi->esc_clk);
+	clk_prepare(dsi->pixel_clk);
 }
 
 void dsi_clk_unprepare(struct dsi *dsi)
@@ -60,6 +61,7 @@ void dsi_clk_unprepare(struct dsi *dsi)
 	clk_unprepare(dsi->m_pclk);
 	clk_unprepare(dsi->s_pclk);
 	clk_unprepare(dsi->amp_pclk);
+	clk_unprepare(dsi->pixel_clk);
 }
 
 void dsi_clk_enable_ahb(struct dsi *dsi)
