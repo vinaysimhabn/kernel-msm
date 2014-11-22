@@ -163,45 +163,45 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 		dsi->cc = NULL;
 	DBG("mmio=%p, sfpb=%p, cc=%p", dsi->mmio, dsi->sfpb, dsi->cc);
 
-	dsi->amp_pclk = devm_clk_get(&pdev->dev, "mdp_core_clk");
-	if (IS_ERR(dsi->amp_pclk)) {
-		ret = PTR_ERR(dsi->amp_pclk);
-		dev_err(dev->dev, "failed to get 'amp_pclk': %d\n", ret);
+	dsi->mdp_core_clk = devm_clk_get(&pdev->dev, "mdp_core_clk");
+	if (IS_ERR(dsi->mdp_core_clk)) {
+		ret = PTR_ERR(dsi->mdp_core_clk);
+		dev_err(dev->dev, "failed to get 'mdp_core_clk': %d\n", ret);
 		goto fail;
 	}
 
-	dsi->m_pclk = devm_clk_get(&pdev->dev, "iface_clk");
-	if (IS_ERR(dsi->m_pclk)) {
-		ret = PTR_ERR(dsi->m_pclk);
-		dev_err(dev->dev, "failed to get 'm_pclk': %d\n", ret);
+	dsi->ahb_clk = devm_clk_get(&pdev->dev, "iface_clk");
+	if (IS_ERR(dsi->ahb_clk)) {
+		ret = PTR_ERR(dsi->ahb_clk);
+		dev_err(dev->dev, "failed to get 'ahb_clk': %d\n", ret);
 		goto fail;
 	}
 
-	dsi->s_pclk = devm_clk_get(&pdev->dev, "bus_clk");
-	if (IS_ERR(dsi->s_pclk)) {
-		ret = PTR_ERR(dsi->s_pclk);
-		dev_err(dev->dev, "failed to get 's_pclk': %d\n", ret);
+	dsi->axi_clk = devm_clk_get(&pdev->dev, "bus_clk");
+	if (IS_ERR(dsi->axi_clk)) {
+		ret = PTR_ERR(dsi->axi_clk);
+		dev_err(dev->dev, "failed to get 'axi_clk': %d\n", ret);
 		goto fail;
 	}
 
-	dsi->byte_div_clk = devm_clk_get(&pdev->dev, "byte_clk");
-	if (IS_ERR(dsi->byte_div_clk)) {
-		ret = PTR_ERR(dsi->byte_div_clk);
-		dev_err(dev->dev, "failed to get 'byte_div_clk': %d\n", ret);
+	dsi->byte_clk = devm_clk_get(&pdev->dev, "byte_clk");
+	if (IS_ERR(dsi->byte_clk)) {
+		ret = PTR_ERR(dsi->byte_clk);
+		dev_err(dev->dev, "failed to get 'byte_clk': %d\n", ret);
 		goto fail;
 	}
 
+	dsi->pixel_clk = devm_clk_get(&pdev->dev, "pixel_clk");
+	if (IS_ERR(dsi->pixel_clk)) {
+		ret = PTR_ERR(dsi->pixel_clk);
+		dev_err(dev->dev, "failed to get 'pixel_clk': %d\n", ret);
+		goto fail;
+	}
+	
 	dsi->esc_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(dsi->esc_clk)) {
 		ret = PTR_ERR(dsi->esc_clk);
 		dev_err(dev->dev, "failed to get 'esc_clk': %d\n", ret);
-		goto fail;
-	}
-	
-	dsi->pixel_clk = devm_clk_get(&pdev->dev, "pixel_clk");
-	if (IS_ERR(dsi->esc_clk)) {
-		ret = PTR_ERR(dsi->esc_clk);
-		dev_err(dev->dev, "failed to get 'pixel_clk': %d\n", ret);
 		goto fail;
 	}
 

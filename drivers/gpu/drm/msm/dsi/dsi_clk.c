@@ -39,38 +39,38 @@ const struct dsi_clk_mnd *dsi_find_clk_mnd(unsigned bpp, unsigned nlanes)
 
 void dsi_clk_prepare(struct dsi *dsi)
 {
-	if (clk_set_rate(dsi->byte_div_clk, 1) < 0)      /* divided by 1 */
+	if (clk_set_rate(dsi->byte_clk, 1) < 0)      /* divided by 1 */
                 pr_err("%s: dsi_byte_div_clk - "
                         "clk_set_rate failed\n", __func__);
         if (clk_set_rate(dsi->esc_clk, 2) < 0) /* divided by 2 */
                 pr_err("%s: dsi_esc_clk - "
                         "clk_set_rate failed\n", __func__);
 
-	clk_prepare(dsi->amp_pclk);
-	clk_prepare(dsi->m_pclk);
-	clk_prepare(dsi->s_pclk);
-	clk_prepare(dsi->byte_div_clk);
-	clk_prepare(dsi->esc_clk);
+	clk_prepare(dsi->mdp_core_clk);
+	clk_prepare(dsi->ahb_clk);
+	clk_prepare(dsi->axi_clk);
+	clk_prepare(dsi->byte_clk);
 	clk_prepare(dsi->pixel_clk);
+	clk_prepare(dsi->esc_clk);
 }
 
 void dsi_clk_unprepare(struct dsi *dsi)
 {
 	clk_unprepare(dsi->esc_clk);
-	clk_unprepare(dsi->byte_div_clk);
-	clk_unprepare(dsi->m_pclk);
-	clk_unprepare(dsi->s_pclk);
-	clk_unprepare(dsi->amp_pclk);
 	clk_unprepare(dsi->pixel_clk);
+	clk_unprepare(dsi->byte_clk);
+	clk_unprepare(dsi->axi_clk);
+	clk_unprepare(dsi->ahb_clk);
+	clk_unprepare(dsi->mdp_core_clk);
 }
 
 void dsi_clk_enable_ahb(struct dsi *dsi)
 {
 	uint32_t reg;
 
-	clk_enable(dsi->amp_pclk); /* clock for AHB-master to AXI */
-	clk_enable(dsi->m_pclk);
-	clk_enable(dsi->s_pclk);
+	clk_enable(dsi->mdp_core_clk); /* clock for AHB-master to AXI */
+	clk_enable(dsi->ahb_clk);
+	clk_enable(dsi->axi_clk);
 
 	reg = cc_read(dsi, REG_MMSS_CC_AHB);
 	DBG("ahb: %08x", reg);
@@ -82,9 +82,9 @@ void dsi_clk_enable_ahb(struct dsi *dsi)
 
 void dsi_clk_disable_ahb(struct dsi *dsi)
 {
-	clk_disable(dsi->m_pclk);
-	clk_disable(dsi->s_pclk);
-	clk_disable(dsi->amp_pclk); /* clock for AHB-master to AXI */
+	clk_disable(dsi->axi_clk);
+	clk_disable(dsi->ahb_clk);
+	clk_disable(dsi->mdp_core_clk); /* clock for AHB-master to AXI */
 }
 
 static void enable_clk(struct dsi *dsi, enum mmss_cc_clk clk,

@@ -44,12 +44,12 @@ struct dsi {
 
 	struct dsi_clk_desc clk, pclk;
 
-	struct clk *byte_div_clk;
-	struct clk *esc_clk;
-	struct clk *m_pclk;
-	struct clk *s_pclk;
-	struct clk *amp_pclk;
+	struct clk *mdp_core_clk;
+	struct clk *ahb_clk;
+	struct clk *axi_clk;
+	struct clk *byte_clk;
 	struct clk *pixel_clk;
+	struct clk *esc_clk;
 
 	struct panel *panel;
 	struct dsi_phy *phy;

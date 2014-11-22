@@ -138,13 +138,13 @@ static void dsi_phy_8x60_clk_enable(struct dsi_phy *phy)
 			pll_ctrl | DSI_PHY_PLL_CTRL_0_ENABLE);
 	mb();
 
-	if (clk_set_rate(dsi->byte_div_clk, 1) < 0)	/* divided by 1 */
-		dev_err(dsi->dev->dev, "failed to set byte_div_clk\n");
+	if (clk_set_rate(dsi->byte_clk, 1) < 0)	/* divided by 1 */
+		dev_err(dsi->dev->dev, "failed to set byte_clk\n");
 
 	dsi_clk_enable_pclk(dsi);
 	dsi_clk_enable_clk(dsi);
 
-	clk_enable(dsi->byte_div_clk);
+	clk_enable(dsi->byte_clk);
 	clk_enable(dsi->esc_clk);
 }
 
@@ -155,7 +155,7 @@ static void dsi_phy_8x60_clk_disable(struct dsi_phy *phy)
 	uint32_t pll_ctrl;
 
 	clk_disable(dsi->esc_clk);
-	clk_disable(dsi->byte_div_clk);
+	clk_disable(dsi->byte_clk);
 
 	dsi_clk_disable_clk(dsi);
 	dsi_clk_disable_pclk(dsi);
