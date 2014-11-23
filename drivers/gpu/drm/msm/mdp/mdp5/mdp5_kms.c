@@ -355,9 +355,10 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 
 	/* Construct bridge/connector for DSI: */
 
-        ret = dsi_init(dev, encoder);
+        ret = dsi_modeset_init(dev, encoder);
+        //ret = dsi_init(dev, encoder);
         if (ret) {
-               dev_err(dev->dev, "failed to initialize DSI: %d\n", ret);
+               dev_err(dev->dev, "failed to initialize DSI modeset init: %d\n", ret);
                goto fail;
         }
 

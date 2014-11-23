@@ -105,17 +105,79 @@ void dsi_destroy(struct kref *kref)
 	put_device(&dsi->pdev->dev);
 }
 
-/* initialize connector */
-int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
+int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
 {
 	struct dsi *dsi = NULL;
 	struct msm_drm_private *priv = dev->dev_private;
 	struct platform_device *pdev = dsi_pdev;
+	int ret;
+
+	dsi->dev = dev;
+	dsi->encoder = encoder;
+
+	dsi->bridge = dsi_bridge_init(dsi);
+	if (IS_ERR(dsi->bridge)) {
+		ret = PTR_ERR(dsi->bridge);
+		dev_err(dev->dev, "failed to create DSI bridge: %d\n", ret);
+		dsi->bridge = NULL;
+		goto fail;
+	}
+
+	dsi->connector = dsi_connector_init(dsi);
+	if (IS_ERR(dsi->connector)) {
+		ret = PTR_ERR(dsi->connector);
+		dev_err(dev->dev, "failed to create DSI connector: %d\n", ret);
+		dsi->connector = NULL;
+		goto fail;
+	}
+	dsi_write(dsi, REG_DSI_RESET, 1);
+	dsi_write(dsi, REG_DSI_RESET, 0);
+
+	dsi_write(dsi, REG_DSI_INTR_CTRL, 0);
+
+	dsi->irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
+	if (dsi->irq < 0) {
+		dev_err(dev->dev, "failed to get irq: %d\n", ret);
+		goto fail;
+	}
+
+	ret = devm_request_irq(&pdev->dev, dsi->irq, dsi_irq,
+			IRQF_TRIGGER_HIGH | IRQF_ONESHOT, "dsi_isr", dsi);
+	if (ret < 0) {
+		dev_err(dev->dev, "failed to request IRQ%u: %d\n",
+				dsi->irq, ret);
+		goto fail;
+	}
+
+	encoder->bridge = dsi->bridge;
+
+	priv->bridges[priv->num_bridges++]       = dsi->bridge;
+	priv->connectors[priv->num_connectors++] = dsi->connector;
+
+	return 0;
+fail:
+	/* bridge/connector are normally destroyed by drm: */
+	if (dsi->bridge){
+		dsi->bridge->funcs->destroy(dsi->bridge);
+		dsi->bridge = NULL;
+	}
+	if (dsi->connector){
+		dsi->connector->funcs->destroy(dsi->connector);
+		dsi->connector = NULL;
+	}
+
+	return ret;
+}
+/* initialize connector */
+int dsi_init(struct platform_device *pdev)
+{
+	struct dsi *dsi = NULL;
+//	struct platform_device *pdev = dsi_pdev;
 	struct dsi_platform_config *config;
 	int ret;
 
 	if (!pdev) {
-		dev_err(dev->dev, "no dsi device\n");
+		dev_err(&pdev->dev, "no dsi device\n");
 		ret = -ENXIO;
 		goto fail;
 	}
@@ -132,9 +194,8 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 
 	get_device(&pdev->dev);
 
-	dsi->dev = dev;
+	//dsi->dev = dev;
 	dsi->pdev = pdev;
-	dsi->encoder = encoder;
 
 	if (config->phy_init)
 		dsi->phy = config->phy_init(dsi);
@@ -143,7 +204,7 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 
 	if (IS_ERR(dsi->phy)) {
 		ret = PTR_ERR(dsi->phy);
-		dev_err(dev->dev, "failed to load phy: %d\n", ret);
+		dev_err(&pdev->dev, "failed to load phy: %d\n", ret);
 		dsi->phy = NULL;
 		goto fail;
 	}
@@ -166,42 +227,42 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 	dsi->mdp_core_clk = devm_clk_get(&pdev->dev, "mdp_core_clk");
 	if (IS_ERR(dsi->mdp_core_clk)) {
 		ret = PTR_ERR(dsi->mdp_core_clk);
-		dev_err(dev->dev, "failed to get 'mdp_core_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'mdp_core_clk': %d\n", ret);
 		goto fail;
 	}
 
 	dsi->ahb_clk = devm_clk_get(&pdev->dev, "iface_clk");
 	if (IS_ERR(dsi->ahb_clk)) {
 		ret = PTR_ERR(dsi->ahb_clk);
-		dev_err(dev->dev, "failed to get 'ahb_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'ahb_clk': %d\n", ret);
 		goto fail;
 	}
 
 	dsi->axi_clk = devm_clk_get(&pdev->dev, "bus_clk");
 	if (IS_ERR(dsi->axi_clk)) {
 		ret = PTR_ERR(dsi->axi_clk);
-		dev_err(dev->dev, "failed to get 'axi_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'axi_clk': %d\n", ret);
 		goto fail;
 	}
 
 	dsi->byte_clk = devm_clk_get(&pdev->dev, "byte_clk");
 	if (IS_ERR(dsi->byte_clk)) {
 		ret = PTR_ERR(dsi->byte_clk);
-		dev_err(dev->dev, "failed to get 'byte_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'byte_clk': %d\n", ret);
 		goto fail;
 	}
 
 	dsi->pixel_clk = devm_clk_get(&pdev->dev, "pixel_clk");
 	if (IS_ERR(dsi->pixel_clk)) {
 		ret = PTR_ERR(dsi->pixel_clk);
-		dev_err(dev->dev, "failed to get 'pixel_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'pixel_clk': %d\n", ret);
 		goto fail;
 	}
 	
 	dsi->esc_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(dsi->esc_clk)) {
 		ret = PTR_ERR(dsi->esc_clk);
-		dev_err(dev->dev, "failed to get 'esc_clk': %d\n", ret);
+		dev_err(&pdev->dev, "failed to get 'esc_clk': %d\n", ret);
 		goto fail;
 	}
 
@@ -209,7 +270,7 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 	dsi->mipi = dsi_mipi_init(dsi);
 	if (IS_ERR(dsi->mipi)) {
 		ret = PTR_ERR(dsi->mipi);
-		dev_err(dev->dev, "failed to get DSI adapter: %d\n", ret);
+		dev_err(&pdev->dev, "failed to get DSI adapter: %d\n", ret);
 		dsi->mipi = NULL;
 		goto fail;
 	}
@@ -221,57 +282,9 @@ int dsi_init(struct drm_device *dev, struct drm_encoder *encoder)
 		goto fail;
 	}
 
-	dsi->bridge = dsi_bridge_init(dsi);
-	if (IS_ERR(dsi->bridge)) {
-		ret = PTR_ERR(dsi->bridge);
-		dev_err(dev->dev, "failed to create DSI bridge: %d\n", ret);
-		dsi->bridge = NULL;
-		goto fail;
-	}
-
-
-	dsi->connector = dsi_connector_init(dsi);
-	if (IS_ERR(dsi->connector)) {
-		ret = PTR_ERR(dsi->connector);
-		dev_err(dev->dev, "failed to create DSI connector: %d\n", ret);
-		dsi->connector = NULL;
-		goto fail;
-	}
-	dsi_write(dsi, REG_DSI_RESET, 1);
-	dsi_write(dsi, REG_DSI_RESET, 0);
-
-	dsi_write(dsi, REG_DSI_INTR_CTRL, 0);
-
-	dsi->irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
-	//dsi->irq = platform_get_irq(pdev, 0);
-	if (dsi->irq < 0) {
-		ret = dsi->irq;
-		dev_err(dev->dev, "failed to get irq: %d\n", ret);
-		goto fail;
-	}
-
-	ret = devm_request_irq(&pdev->dev, dsi->irq, dsi_irq,
-			IRQF_TRIGGER_HIGH | IRQF_ONESHOT, "dsi_isr", dsi);
-	if (ret < 0) {
-		dev_err(dev->dev, "failed to request IRQ%u: %d\n",
-				dsi->irq, ret);
-		goto fail;
-	}
-
-	encoder->bridge = dsi->bridge;
-
-	priv->bridges[priv->num_bridges++]       = dsi->bridge;
-	priv->connectors[priv->num_connectors++] = dsi->connector;
-
 	return 0;
-
 fail:
 	if (dsi) {
-		/* bridge/connector are normally destroyed by drm: */
-		if (dsi->bridge)
-			dsi->bridge->funcs->destroy(dsi->bridge);
-		if (dsi->connector)
-			dsi->connector->funcs->destroy(dsi->connector);
 		dsi_destroy(&dsi->refcount);
 	}
 
@@ -286,6 +299,7 @@ static int dsi_dev_probe(struct platform_device *pdev)
 {
 	static struct dsi_platform_config config = {};
 	struct device *dev = &pdev->dev;
+	int ret = 0;
 #ifdef CONFIG_OF
 	struct device_node *of_node = pdev->dev.of_node;
 	/* TODO */
@@ -306,6 +320,12 @@ static int dsi_dev_probe(struct platform_device *pdev)
 		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 	pdev->dev.platform_data = &config;
 	dsi_pdev = pdev;
+
+        ret = dsi_init(to_platform_device(dev));
+        if (ret) {
+               dev_err(&pdev->dev, "failed to initialize DSI: %d\n", ret);
+               return ret;
+        }
 
 	return 0;
 }
