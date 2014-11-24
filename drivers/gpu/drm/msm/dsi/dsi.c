@@ -38,6 +38,7 @@ static int get_gpio(struct device *dev, struct device_node *of_node, const char 
 #endif
 
 static struct platform_device *dsi_pdev;
+static struct dsi *dsi_global;
 
 static irqreturn_t dsi_irq(int irq, void *dev_id)
 {
@@ -107,7 +108,8 @@ void dsi_destroy(struct kref *kref)
 
 int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
 {
-	struct dsi *dsi = NULL;
+	struct dsi *dsi = dsi_global;
+	//struct dsi *dsi = NULL;
 	struct msm_drm_private *priv = dev->dev_private;
 	struct platform_device *pdev = dsi_pdev;
 	int ret;
@@ -115,6 +117,12 @@ int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
 	dsi->dev = dev;
 	dsi->encoder = encoder;
 
+	dsi->panel = mipi_panel_init(dsi->dev, dsi->pdev, dsi->mipi);
+	if (IS_ERR(dsi->panel)) {
+		ret = PTR_ERR(dsi->panel);
+		dev_err(dsi->dev->dev, "failed to load panel: %d\n", ret);
+		goto fail;
+	}
 	dsi->bridge = dsi_bridge_init(dsi);
 	if (IS_ERR(dsi->bridge)) {
 		ret = PTR_ERR(dsi->bridge);
@@ -137,6 +145,7 @@ int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
 
 	dsi->irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	if (dsi->irq < 0) {
+		ret = dsi->irq;
 		dev_err(dev->dev, "failed to get irq: %d\n", ret);
 		goto fail;
 	}
@@ -144,7 +153,7 @@ int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
 	ret = devm_request_irq(&pdev->dev, dsi->irq, dsi_irq,
 			IRQF_TRIGGER_HIGH | IRQF_ONESHOT, "dsi_isr", dsi);
 	if (ret < 0) {
-		dev_err(dev->dev, "failed to request IRQ%u: %d\n",
+		dev_err(&pdev->dev, "failed to request IRQ%u: %d\n",
 				dsi->irq, ret);
 		goto fail;
 	}
@@ -266,7 +275,6 @@ int dsi_init(struct platform_device *pdev)
 		goto fail;
 	}
 
-
 	dsi->mipi = dsi_mipi_init(dsi);
 	if (IS_ERR(dsi->mipi)) {
 		ret = PTR_ERR(dsi->mipi);
@@ -274,13 +282,8 @@ int dsi_init(struct platform_device *pdev)
 		dsi->mipi = NULL;
 		goto fail;
 	}
-
-	dsi->panel = mipi_panel_init(dsi->dev, dsi->pdev, dsi->mipi);
-	if (IS_ERR(dsi->panel)) {
-		ret = PTR_ERR(dsi->panel);
-		dev_err(dsi->dev->dev, "failed to load panel: %d\n", ret);
-		goto fail;
-	}
+	
+	dsi_global = dsi;
 
 	return 0;
 fail:
@@ -302,14 +305,13 @@ static int dsi_dev_probe(struct platform_device *pdev)
 	int ret = 0;
 #ifdef CONFIG_OF
 	struct device_node *of_node = pdev->dev.of_node;
-	/* TODO */
 	config.phy_init = dsi_phy_8960_init;
 	config.mmio_dsi_ctrl = "dsi_ctrl";
         config.mmio_dsi_phy = "dsi_phy";
         config.mmio_dsi_mmss_misc_phys = "mmss_misc_phys";
-	config.backlight_gpio = get_gpio(dev, of_node, "platform-bklight-en-gpio");
-	config.lcdreset_gpio = get_gpio(dev, of_node, "platform-reset-gpio");
-	config.te_gpio = get_gpio(dev, of_node, "platform-te-gpio");
+	config.backlight_gpio = get_gpio(dev, of_node, "qcom,platform-bklight-en-gpio");
+	config.lcdreset_gpio = get_gpio(dev, of_node, "qcom,platform-reset-gpio");
+	config.te_gpio = get_gpio(dev, of_node, "qcom,platform-te-gpio");
 #else
 	if (cpu_is_apq8064() || cpu_is_msm8960())
 		config.phy_init = dsi_phy_8960_init;
