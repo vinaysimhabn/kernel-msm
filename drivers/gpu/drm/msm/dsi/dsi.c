@@ -38,7 +38,6 @@ static int get_gpio(struct device *dev, struct device_node *of_node, const char 
 #endif
 
 static struct platform_device *dsi_pdev;
-static struct dsi *dsi_global;
 
 static irqreturn_t dsi_irq(int irq, void *dev_id)
 {
@@ -106,12 +105,11 @@ void dsi_destroy(struct kref *kref)
 	put_device(&dsi->pdev->dev);
 }
 
-int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder)
+int dsi_modeset_init(struct dsi *dsi,struct drm_device *dev, 
+			struct drm_encoder *encoder)
 {
-	struct dsi *dsi = dsi_global;
-	//struct dsi *dsi = NULL;
 	struct msm_drm_private *priv = dev->dev_private;
-	struct platform_device *pdev = dsi_pdev;
+	struct platform_device *pdev = dsi->pdev;
 	int ret;
 
 	dsi->dev = dev;
@@ -178,10 +176,9 @@ fail:
 	return ret;
 }
 /* initialize connector */
-int dsi_init(struct platform_device *pdev)
+static struct dsi *dsi_init(struct platform_device *pdev)
 {
 	struct dsi *dsi = NULL;
-//	struct platform_device *pdev = dsi_pdev;
 	struct dsi_platform_config *config;
 	int ret;
 
@@ -193,7 +190,7 @@ int dsi_init(struct platform_device *pdev)
 
 	config = pdev->dev.platform_data;
 
-	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
+	dsi = devm_kzalloc(&pdev->dev, sizeof(*dsi), GFP_KERNEL);
 	if (!dsi) {
 		ret = -ENOMEM;
 		goto fail;
@@ -201,9 +198,8 @@ int dsi_init(struct platform_device *pdev)
 
 	kref_init(&dsi->refcount);
 
-	get_device(&pdev->dev);
+//	get_device(&pdev->dev);
 
-	//dsi->dev = dev;
 	dsi->pdev = pdev;
 
 	if (config->phy_init)
@@ -283,53 +279,69 @@ int dsi_init(struct platform_device *pdev)
 		goto fail;
 	}
 	
-	dsi_global = dsi;
-
-	return 0;
+	return dsi;
 fail:
 	if (dsi) {
 		dsi_destroy(&dsi->refcount);
 	}
 
-	return ret;
+	return ERR_PTR(ret);	
 }
+
+static int dsi_bind(struct device *dev, struct device *master, void *data)
+{
+        struct drm_device *drm = dev_get_drvdata(master);
+        struct msm_drm_private *priv = drm->dev_private;
+        static struct dsi_platform_config config = {};
+        struct dsi *dsi;
+#ifdef CONFIG_OF
+        struct device_node *of_node = dev->of_node;
+        config.phy_init = dsi_phy_8960_init;
+        config.mmio_dsi_ctrl = "dsi_ctrl";
+        config.mmio_dsi_phy = "dsi_phy";
+        config.mmio_dsi_mmss_misc_phys = "mmss_misc_phys";
+        config.backlight_gpio = get_gpio(dev, of_node, "qcom,platform-bklight-en-gpio");
+        config.lcdreset_gpio = get_gpio(dev, of_node, "qcom,platform-reset-gpio");
+        config.te_gpio = get_gpio(dev, of_node, "qcom,platform-te-gpio");
+#else
+        if (cpu_is_apq8064() || cpu_is_msm8960())
+                config.phy_init = dsi_phy_8960_init;
+        else if (cpu_is_msm8x60())
+                config.phy_init = dsi_phy_8x60_init;
+#endif
+	dev->platform_data = &config;
+
+	dsi = dsi_init(to_platform_device(dev));
+        if (IS_ERR(dsi)) {
+               return PTR_ERR(dsi);
+        }
+	priv->dsi = dsi;
+
+	return 0;
+}
+static void dsi_unbind(struct device *dev, struct device *master,
+                void *data)
+{
+        struct drm_device *drm = dev_get_drvdata(master);
+        struct msm_drm_private *priv = drm->dev_private;
+        if (priv->dsi) {
+		dsi_destroy(&priv->dsi->refcount);
+                priv->dsi = NULL;
+        }
+}
+
+static const struct component_ops dsi_ops = {
+                .bind   = dsi_bind,
+                .unbind = dsi_unbind,
+};
 
 /*
  * The dsi device:
  */
-
 static int dsi_dev_probe(struct platform_device *pdev)
 {
-	static struct dsi_platform_config config = {};
-	struct device *dev = &pdev->dev;
-	int ret = 0;
-#ifdef CONFIG_OF
-	struct device_node *of_node = pdev->dev.of_node;
-	config.phy_init = dsi_phy_8960_init;
-	config.mmio_dsi_ctrl = "dsi_ctrl";
-        config.mmio_dsi_phy = "dsi_phy";
-        config.mmio_dsi_mmss_misc_phys = "mmss_misc_phys";
-	config.backlight_gpio = get_gpio(dev, of_node, "qcom,platform-bklight-en-gpio");
-	config.lcdreset_gpio = get_gpio(dev, of_node, "qcom,platform-reset-gpio");
-	config.te_gpio = get_gpio(dev, of_node, "qcom,platform-te-gpio");
-#else
-	if (cpu_is_apq8064() || cpu_is_msm8960())
-		config.phy_init = dsi_phy_8960_init;
-	else if (cpu_is_msm8x60())
-		config.phy_init = dsi_phy_8x60_init;
-#endif
-	if (!pdev->dev.coherent_dma_mask)
-		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-	pdev->dev.platform_data = &config;
-	dsi_pdev = pdev;
-
-        ret = dsi_init(to_platform_device(dev));
-        if (ret) {
-               dev_err(&pdev->dev, "failed to initialize DSI: %d\n", ret);
-               return ret;
-        }
-
-	return 0;
+	printk(" dsi probe called \n");
+	return component_add(&pdev->dev, &dsi_ops);
 }
 
 static int dsi_dev_remove(struct platform_device *pdev)

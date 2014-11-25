@@ -75,6 +75,7 @@ struct msm_drm_private {
 	 * shared by both mdp4 and mdp5..
 	 */
 	struct hdmi *hdmi;
+	struct dsi *dsi;
 
 	/* when we have more than one 'msm_gpu' these need to be an array: */
 	struct msm_gpu *gpu;
@@ -212,7 +213,8 @@ struct drm_framebuffer *msm_framebuffer_create(struct drm_device *dev,
 
 struct drm_fb_helper *msm_fbdev_init(struct drm_device *dev);
 
-int dsi_modeset_init(struct drm_device *dev, struct drm_encoder *encoder);
+int dsi_modeset_init(struct dsi *dsi, struct drm_device *dev,
+		struct drm_encoder *encoder);
 void __init dsi_register(void);
 void __exit dsi_unregister(void);
 
