@@ -348,8 +348,8 @@ static int modeset_init(struct mdp5_kms *mdp5_kms)
 		ret = PTR_ERR(encoder);
 		goto fail;
 	}
-	encoder->possible_crtcs =  1 << priv->num_crtcs;
-        mdp5_crtc_set_intf(priv->crtcs[0], 1, INTF_DSI);
+	encoder->possible_crtcs =  BIT(1);
+        mdp5_crtc_set_intf(priv->crtcs[1], 1, INTF_DSI);
 
         priv->encoders[priv->num_encoders++] = encoder;
 
