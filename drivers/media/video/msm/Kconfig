@@ -56,10 +56,17 @@ config WEBCAM_OV7692_QRD
 	---help---
 	  Omni Vision VGA YUV Sensor for QRD Devices
 
+config OV5645
+        bool "Sensor OV5645 (YUV 5M)"
+        depends on MSM_CAMERA
+        default y
+        ---help---
+        OmniVision 5 MP YUV Sensor for Inforce APQ8064 dragon boards
+
 config OV5640
         bool "Sensor OV5640 (YUV 5M)"
         depends on MSM_CAMERA
-        default y
+        default n
         ---help---
         OmniVision 5 MP YUV Sensor for Inforce APQ8064 dragon boards
 
