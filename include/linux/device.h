@@ -567,7 +567,7 @@ extern void * __must_check devres_open_group(struct device *dev, void *id,
 extern void devres_close_group(struct device *dev, void *id);
 extern void devres_remove_group(struct device *dev, void *id);
 extern int devres_release_group(struct device *dev, void *id);
-
+extern void *devm_kmalloc(struct device *dev, size_t size, gfp_t gfp);
 /* managed kzalloc/kfree for device drivers, no kmalloc, always use kzalloc */
 extern void *devm_kzalloc(struct device *dev, size_t size, gfp_t gfp);
 extern void devm_kfree(struct device *dev, void *p);

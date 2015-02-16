@@ -172,7 +172,14 @@ struct dma_buf *dma_buf_export_named(void *priv, const struct dma_buf_ops *ops,
 
 #define dma_buf_export(priv, ops, size, flags)	\
 	dma_buf_export_named(priv, ops, size, flags, __FILE__)
+/*
+struct dma_buf *dma_buf_export_named(void *priv, const struct dma_buf_ops *ops,
+                               size_t size, int flags, const char *,
+                               struct reservation_object *);
 
+#define dma_buf_export(priv, ops, size, flags, resv)    \
+        dma_buf_export_named(priv, ops, size, flags, KBUILD_MODNAME, resv)
+*/
 int dma_buf_fd(struct dma_buf *dmabuf, int flags);
 struct dma_buf *dma_buf_get(int fd);
 void dma_buf_put(struct dma_buf *dmabuf);
