@@ -32,13 +32,6 @@ struct mdp4_kms {
 
 	int rev;
 
-	/* Shadow value for MDP4_LAYERMIXER_IN_CFG.. since setup for all
-	 * crtcs/encoders is in one shared register, we need to update it
-	 * via read/modify/write.  But to avoid getting confused by power-
-	 * on-default values after resume, use this shadow value instead:
-	 */
-	uint32_t mixer_cfg;
-
 	/* mapper-id used to request GEM buffer mapped for scanout: */
 	int id;
 
@@ -182,14 +175,25 @@ irqreturn_t mdp4_irq(struct msm_kms *kms);
 int mdp4_enable_vblank(struct msm_kms *kms, struct drm_crtc *crtc);
 void mdp4_disable_vblank(struct msm_kms *kms, struct drm_crtc *crtc);
 
+static inline bool pipe_supports_yuv(enum mdp4_pipe pipe)
+{
+	switch (pipe) {
+	case VG1:
+	case VG2:
+	case VG3:
+	case VG4:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static inline
 uint32_t mdp4_get_formats(enum mdp4_pipe pipe_id, uint32_t *pixel_formats,
 		uint32_t max_formats)
 {
-	/* TODO when we have YUV, we need to filter supported formats
-	 * based on pipe_id..
-	 */
-	return mdp_get_formats(pixel_formats, max_formats);
+	return mdp_get_formats(pixel_formats, max_formats,
+				!pipe_supports_yuv(pipe_id));
 }
 
 void mdp4_plane_install_properties(struct drm_plane *plane,

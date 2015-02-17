@@ -93,7 +93,7 @@ static int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce);
 static int gpiod_get_value_cansleep(const struct gpio_desc *desc);
 static void gpiod_set_value_cansleep(struct gpio_desc *desc, int value);
 static int gpiod_get_value(const struct gpio_desc *desc);
-static void gpiod_set_value(struct gpio_desc *desc, int value);
+void gpiod_set_value(struct gpio_desc *desc, int value);
 static int gpiod_cansleep(const struct gpio_desc *desc);
 static int gpiod_to_irq(const struct gpio_desc *desc);
 static int gpiod_export(struct gpio_desc *desc, bool direction_may_change);
@@ -1919,7 +1919,7 @@ static void _gpio_set_open_source_value(struct gpio_desc *desc, int value)
  * This is used directly or indirectly to implement gpio_set_value().
  * It invokes the associated gpio_chip.set() method.
  */
-static void gpiod_set_value(struct gpio_desc *desc, int value)
+void gpiod_set_value(struct gpio_desc *desc, int value)
 {
 	struct gpio_chip	*chip;
 
@@ -1936,6 +1936,7 @@ static void gpiod_set_value(struct gpio_desc *desc, int value)
 	else
 		chip->set(chip, gpio_chip_hwgpio(desc), value);
 }
+EXPORT_SYMBOL_GPL(gpiod_set_value);
 
 void __gpio_set_value(unsigned gpio, int value)
 {

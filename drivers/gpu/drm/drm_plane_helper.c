@@ -155,6 +155,11 @@ int drm_plane_helper_check_update(struct drm_plane *plane,
 		return -ERANGE;
 	}
 
+	if (!fb) {
+		*visible = false;
+		return 0;
+	}
+
 	*visible = drm_rect_clip_scaled(src, dest, clip, hscale, vscale);
 	if (!*visible)
 		/*
@@ -438,7 +443,7 @@ int drm_plane_helper_commit(struct drm_plane *plane,
 			crtc_funcs[i]->atomic_begin(crtc[i]);
 	}
 
-	plane_funcs->atomic_update(plane);
+	plane_funcs->atomic_update(plane, plane_state);
 
 	for (i = 0; i < 2; i++) {
 		if (crtc_funcs[i] && crtc_funcs[i]->atomic_flush)
@@ -512,6 +517,7 @@ int drm_plane_helper_update(struct drm_plane *plane, struct drm_crtc *crtc,
 		plane_state = kzalloc(sizeof(*plane_state), GFP_KERNEL);
 	if (!plane_state)
 		return -ENOMEM;
+	plane_state->plane = plane;
 
 	plane_state->crtc = crtc;
 	drm_atomic_set_fb_for_plane(plane_state, fb);
@@ -558,6 +564,7 @@ int drm_plane_helper_disable(struct drm_plane *plane)
 		plane_state = kzalloc(sizeof(*plane_state), GFP_KERNEL);
 	if (!plane_state)
 		return -ENOMEM;
+	plane_state->plane = plane;
 
 	plane_state->crtc = NULL;
 	drm_atomic_set_fb_for_plane(plane_state, NULL);

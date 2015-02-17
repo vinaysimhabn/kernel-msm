@@ -24,7 +24,7 @@
 struct msm_framebuffer {
 	struct drm_framebuffer base;
 	const struct msm_format *format;
-	struct drm_gem_object *planes[3];
+	struct drm_gem_object *planes[MAX_PLANE];
 };
 #define to_msm_framebuffer(x) container_of(x, struct msm_framebuffer, base)
 
@@ -120,7 +120,9 @@ void msm_framebuffer_cleanup(struct drm_framebuffer *fb, int id)
 uint32_t msm_framebuffer_iova(struct drm_framebuffer *fb, int id, int plane)
 {
 	struct msm_framebuffer *msm_fb = to_msm_framebuffer(fb);
-	return msm_gem_iova(msm_fb->planes[plane], id);
+	if (!msm_fb->planes[plane])
+		return 0;
+	return msm_gem_iova(msm_fb->planes[plane], id) + fb->offsets[plane];
 }
 
 struct drm_gem_object *msm_framebuffer_bo(struct drm_framebuffer *fb, int plane)

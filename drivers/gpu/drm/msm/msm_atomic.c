@@ -23,9 +23,40 @@ struct msm_commit {
 	struct drm_atomic_state *state;
 	uint32_t fence;
 	struct msm_fence_cb fence_cb;
+	uint32_t crtc_mask;
 };
 
 static void fence_cb(struct msm_fence_cb *cb);
+
+/* block until specified crtcs are no longer pending update, and
+ * atomically mark them as pending update
+ */
+static int start_atomic(struct msm_drm_private *priv, uint32_t crtc_mask)
+{
+	int ret;
+
+	spin_lock(&priv->pending_crtcs_event.lock);
+	ret = wait_event_interruptible_locked(priv->pending_crtcs_event,
+			!(priv->pending_crtcs & crtc_mask));
+	if (ret == 0) {
+		DBG("start: %08x", crtc_mask);
+		priv->pending_crtcs |= crtc_mask;
+	}
+	spin_unlock(&priv->pending_crtcs_event.lock);
+
+	return ret;
+}
+
+/* clear specified crtcs (no longer pending update)
+ */
+static void end_atomic(struct msm_drm_private *priv, uint32_t crtc_mask)
+{
+	spin_lock(&priv->pending_crtcs_event.lock);
+	DBG("end: %08x", crtc_mask);
+	priv->pending_crtcs &= ~crtc_mask;
+	wake_up_all_locked(&priv->pending_crtcs_event);
+	spin_unlock(&priv->pending_crtcs_event.lock);
+}
 
 static struct msm_commit *new_commit(struct drm_atomic_state *state)
 {
@@ -58,11 +89,26 @@ static void complete_commit(struct msm_commit *c)
 
 	drm_atomic_helper_commit_post_planes(dev, state);
 
+	/* NOTE: _wait_for_vblanks() only waits for vblank on
+	 * enabled CRTCs.  So we end up faulting when disabling
+	 * due to (potentially) unref'ing the outgoing fb's
+	 * before the vblank when the disable has latched.
+	 *
+	 * But if it did wait on disabled (or newly disabled)
+	 * CRTCs, that would be racy (ie. we could have missed
+	 * the irq.  We need some way to poll for pipe shut
+	 * down.  Or just live with occasionally hitting the
+	 * timeout in the CRTC disable path (which really should
+	 * not be critical path)
+	 */
+
 	drm_atomic_helper_wait_for_vblanks(dev, state);
 
 	drm_atomic_helper_cleanup_planes(dev, state);
 
 	drm_atomic_state_free(state);
+
+	end_atomic(dev->dev_private, c->crtc_mask);
 
 	kfree(c);
 }
@@ -81,6 +127,26 @@ static void add_fb(struct msm_commit *c, struct drm_framebuffer *fb)
 }
 
 
+int msm_atomic_check(struct drm_device *dev,
+		     struct drm_atomic_state *state)
+{
+	int ret;
+
+	/*
+	 * msm ->atomic_check can update ->mode_changed for pixel format
+	 * changes, hence must be run before we check the modeset changes.
+	 */
+	ret = drm_atomic_helper_check_planes(dev, state);
+	if (ret)
+		return ret;
+
+	ret = drm_atomic_helper_check_modeset(dev, state);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
 /**
  * drm_atomic_helper_commit - commit validated state object
  * @dev: DRM device
@@ -97,8 +163,10 @@ static void add_fb(struct msm_commit *c, struct drm_framebuffer *fb)
 int msm_atomic_commit(struct drm_device *dev,
 		struct drm_atomic_state *state, bool async)
 {
-	struct msm_commit *c;
 	int nplanes = dev->mode_config.num_total_plane;
+	int ncrtcs = dev->mode_config.num_crtc;
+	struct timespec timeout;
+	struct msm_commit *c;
 	int i, ret;
 
 	ret = drm_atomic_helper_prepare_planes(dev, state);
@@ -106,6 +174,18 @@ int msm_atomic_commit(struct drm_device *dev,
 		return ret;
 
 	c = new_commit(state);
+	if (!c)
+		return -ENOMEM;
+
+	/*
+	 * Figure out what crtcs we have:
+	 */
+	for (i = 0; i < ncrtcs; i++) {
+		struct drm_crtc *crtc = state->crtcs[i];
+		if (!crtc)
+			continue;
+		c->crtc_mask |= (1 << drm_crtc_index(crtc));
+	}
 
 	/*
 	 * Figure out what fence to wait for:
@@ -117,9 +197,17 @@ int msm_atomic_commit(struct drm_device *dev,
 		if (!plane)
 			continue;
 
-		if (plane->state->fb != new_state->fb)
+		if ((plane->state->fb != new_state->fb) && new_state->fb)
 			add_fb(c, new_state->fb);
 	}
+
+	/*
+	 * Wait for pending updates on any of the same crtc's and then
+	 * mark our set of crtc's as busy:
+	 */
+	ret = start_atomic(dev->dev_private, c->crtc_mask);
+	if (ret)
+		return ret;
 
 	/*
 	 * This is the point of no return - everything below never fails except
@@ -150,7 +238,9 @@ int msm_atomic_commit(struct drm_device *dev,
 		return 0;
 	}
 
-	ret = msm_wait_fence_interruptable(dev, c->fence, NULL);
+	jiffies_to_timespec(jiffies + msecs_to_jiffies(1000), &timeout);
+
+	ret = msm_wait_fence_interruptable(dev, c->fence, &timeout);
 	if (ret) {
 		WARN_ON(ret);  // TODO unswap state back?  or??
 		kfree(c);

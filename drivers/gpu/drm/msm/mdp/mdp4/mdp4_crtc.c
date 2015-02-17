@@ -84,7 +84,7 @@ static void crtc_flush(struct drm_crtc *crtc)
 	struct drm_plane *plane;
 	uint32_t flush = 0;
 
-	for_each_plane_on_crtc(crtc, plane) {
+	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		enum mdp4_pipe pipe_id = mdp4_plane_pipe(plane);
 		flush |= pipe2flush(pipe_id);
 	}
@@ -167,41 +167,61 @@ static bool mdp4_crtc_mode_fixup(struct drm_crtc *crtc,
 	return true;
 }
 
+/* statically (for now) map planes to mixer stage (z-order): */
+static const int idxs[] = {
+		[VG1]  = 1,
+		[VG2]  = 2,
+		[RGB1] = 0,
+		[RGB2] = 0,
+		[RGB3] = 0,
+		[VG3]  = 3,
+		[VG4]  = 4,
+
+};
+
+/* setup mixer config, for which we need to consider all crtc's and
+ * the planes attached to them
+ *
+ * TODO may possibly need some extra locking here
+ */
+static void setup_mixer(struct mdp4_kms *mdp4_kms)
+{
+	struct drm_mode_config *config = &mdp4_kms->dev->mode_config;
+	struct drm_crtc *crtc;
+	uint32_t mixer_cfg = 0;
+	static const enum mdp_mixer_stage_id stages[] = {
+			STAGE_BASE, STAGE0, STAGE1, STAGE2, STAGE3,
+	};
+
+	list_for_each_entry(crtc, &config->crtc_list, head) {
+		struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
+		struct drm_plane *plane;
+
+		drm_atomic_crtc_for_each_plane(plane, crtc) {
+			enum mdp4_pipe pipe_id = mdp4_plane_pipe(plane);
+			int idx = idxs[pipe_id];
+			mixer_cfg = mixercfg(mixer_cfg, mdp4_crtc->mixer,
+					pipe_id, stages[idx]);
+		}
+	}
+
+	mdp4_write(mdp4_kms, REG_MDP4_LAYERMIXER_IN_CFG, mixer_cfg);
+}
+
 static void blend_setup(struct drm_crtc *crtc)
 {
 	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
 	struct mdp4_kms *mdp4_kms = get_kms(crtc);
 	struct drm_plane *plane;
 	int i, ovlp = mdp4_crtc->ovlp;
-	uint32_t mixer_cfg = 0;
-	static const enum mdp_mixer_stage_id stages[] = {
-			STAGE_BASE, STAGE0, STAGE1, STAGE2, STAGE3,
-	};
-	/* statically (for now) map planes to mixer stage (z-order): */
-	static const int idxs[] = {
-			[VG1]  = 1,
-			[VG2]  = 2,
-			[RGB1] = 0,
-			[RGB2] = 0,
-			[RGB3] = 0,
-			[VG3]  = 3,
-			[VG4]  = 4,
-
-	};
 	bool alpha[4]= { false, false, false, false };
-
-	/* Don't rely on value read back from hw, but instead use our
-	 * own shadowed value.  Possibly disable/reenable looses the
-	 * previous value and goes back to power-on default?
-	 */
-	mixer_cfg = mdp4_kms->mixer_cfg;
 
 	mdp4_write(mdp4_kms, REG_MDP4_OVLP_TRANSP_LOW0(ovlp), 0);
 	mdp4_write(mdp4_kms, REG_MDP4_OVLP_TRANSP_LOW1(ovlp), 0);
 	mdp4_write(mdp4_kms, REG_MDP4_OVLP_TRANSP_HIGH0(ovlp), 0);
 	mdp4_write(mdp4_kms, REG_MDP4_OVLP_TRANSP_HIGH1(ovlp), 0);
 
-	for_each_plane_on_crtc(crtc, plane) {
+	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		enum mdp4_pipe pipe_id = mdp4_plane_pipe(plane);
 		int idx = idxs[pipe_id];
 		if (idx > 0) {
@@ -209,12 +229,7 @@ static void blend_setup(struct drm_crtc *crtc)
 					to_mdp_format(msm_framebuffer_format(plane->fb));
 			alpha[idx-1] = format->alpha_enable;
 		}
-		mixer_cfg = mixercfg(mixer_cfg, mdp4_crtc->mixer,
-				pipe_id, stages[idx]);
 	}
-
-	/* this shouldn't happen.. and seems to cause underflow: */
-	WARN_ON(!mixer_cfg);
 
 	for (i = 0; i < 4; i++) {
 		uint32_t op;
@@ -238,8 +253,7 @@ static void blend_setup(struct drm_crtc *crtc)
 		mdp4_write(mdp4_kms, REG_MDP4_OVLP_STAGE_TRANSP_HIGH1(ovlp, i), 0);
 	}
 
-	mdp4_kms->mixer_cfg = mixer_cfg;
-	mdp4_write(mdp4_kms, REG_MDP4_LAYERMIXER_IN_CFG, mixer_cfg);
+	setup_mixer(mdp4_kms);
 }
 
 static void mdp4_crtc_mode_set_nofb(struct drm_crtc *crtc)
@@ -309,25 +323,12 @@ static void mdp4_crtc_commit(struct drm_crtc *crtc)
 	drm_crtc_vblank_put(crtc);
 }
 
-static void mdp4_crtc_load_lut(struct drm_crtc *crtc)
-{
-}
-
 static int mdp4_crtc_atomic_check(struct drm_crtc *crtc,
 		struct drm_crtc_state *state)
 {
 	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
-	struct drm_device *dev = crtc->dev;
-
 	DBG("%s: check", mdp4_crtc->name);
-
-	if (mdp4_crtc->event) {
-		dev_err(dev->dev, "already pending flip!\n");
-		return -EBUSY;
-	}
-
 	// TODO anything else to check?
-
 	return 0;
 }
 
@@ -343,7 +344,7 @@ static void mdp4_crtc_atomic_flush(struct drm_crtc *crtc)
 	struct drm_device *dev = crtc->dev;
 	unsigned long flags;
 
-	DBG("%s: flush", mdp4_crtc->name);
+	DBG("%s: event: %p", mdp4_crtc->name, crtc->state->event);
 
 	WARN_ON(mdp4_crtc->event);
 
@@ -510,7 +511,6 @@ static const struct drm_crtc_helper_funcs mdp4_crtc_helper_funcs = {
 	.mode_set_base = drm_helper_crtc_mode_set_base,
 	.prepare = mdp4_crtc_prepare,
 	.commit = mdp4_crtc_commit,
-	.load_lut = mdp4_crtc_load_lut,
 	.atomic_check = mdp4_crtc_atomic_check,
 	.atomic_begin = mdp4_crtc_atomic_begin,
 	.atomic_flush = mdp4_crtc_atomic_flush,
@@ -619,13 +619,10 @@ struct drm_crtc *mdp4_crtc_init(struct drm_device *dev,
 {
 	struct drm_crtc *crtc = NULL;
 	struct mdp4_crtc *mdp4_crtc;
-	int ret;
 
 	mdp4_crtc = kzalloc(sizeof(*mdp4_crtc), GFP_KERNEL);
-	if (!mdp4_crtc) {
-		ret = -ENOMEM;
-		goto fail;
-	}
+	if (!mdp4_crtc)
+		return ERR_PTR(-ENOMEM);
 
 	crtc = &mdp4_crtc->base;
 
@@ -645,7 +642,7 @@ struct drm_crtc *mdp4_crtc_init(struct drm_device *dev,
 
 	spin_lock_init(&mdp4_crtc->cursor.lock);
 
-	drm_flip_work_init(&mdp4_crtc->unref_cursor_work, 64,
+	drm_flip_work_init(&mdp4_crtc->unref_cursor_work,
 			"unref cursor", unref_cursor_worker);
 
 	drm_crtc_init_with_planes(dev, crtc, plane, NULL, &mdp4_crtc_funcs);
@@ -655,10 +652,4 @@ struct drm_crtc *mdp4_crtc_init(struct drm_device *dev,
 	mdp4_plane_install_properties(plane, &crtc->base);
 
 	return crtc;
-
-fail:
-	if (crtc)
-		mdp4_crtc_destroy(crtc);
-
-	return ERR_PTR(ret);
 }
