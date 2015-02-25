@@ -469,6 +469,24 @@ static int hdmi_dev_remove(struct platform_device *pdev)
 	component_del(&pdev->dev, &hdmi_ops);
 	return 0;
 }
+struct msm_hdmi_audio_codec_ops;
+int msm_hdmi_register_audio_codec(struct platform_device *pdev,
+        struct msm_hdmi_audio_codec_ops *ops)
+{
+#if 0
+        struct hdmi_tx_ctrl *hdmi_ctrl = platform_get_drvdata(pdev);
+
+        if (!hdmi_ctrl || !ops) {
+                DEV_ERR("%s: invalid input\n", __func__);
+                return -ENODEV;
+        }
+
+        ops->audio_info_setup = hdmi_tx_audio_info_setup;
+        ops->get_audio_edid_blk = hdmi_tx_get_audio_edid_blk;
+#endif
+        return 0;
+}
+EXPORT_SYMBOL(msm_hdmi_register_audio_codec);
 
 static struct platform_driver hdmi_driver = {
 	.probe = hdmi_dev_probe,
