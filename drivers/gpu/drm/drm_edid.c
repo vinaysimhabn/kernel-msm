@@ -3245,6 +3245,51 @@ int drm_edid_to_sad(struct edid *edid, struct cea_sad **sads)
 }
 EXPORT_SYMBOL(drm_edid_to_sad);
 
+int drm_edid_to_sad2(struct edid *edid, u8 **sads)
+{
+        int count = 0;
+        int i, start, end, dbl;
+        u8 *cea;
+
+        cea = drm_find_cea_extension(edid);
+        if (!cea) {
+                DRM_DEBUG_KMS("SAD: no CEA Extension found\n");
+                return -ENOENT;
+        }
+
+        if (cea_revision(cea) < 3) {
+                DRM_DEBUG_KMS("SAD: wrong CEA revision\n");
+                return -ENOTSUPP;
+        }
+
+        if (cea_db_offsets(cea, &start, &end)) {
+                DRM_DEBUG_KMS("SAD: invalid data block offsets\n");
+                return -EPROTO;
+        }
+
+        for_each_cea_db(cea, i, start, end) {
+                u8 *db = &cea[i];
+
+                if (cea_db_tag(db) == AUDIO_BLOCK) {
+                        int j;
+                        dbl = cea_db_payload_len(db);
+
+                        count = dbl / 3; /* SAD is 3B */
+                        *sads = kcalloc(count, sizeof(**sads), GFP_KERNEL);
+                        if (!*sads)
+                                return -ENOMEM;
+                        for (j = 0; j < count; j++) {
+                                u8 *sad = &db[1 + j * 3];
+
+                        }
+                        break;
+                }
+        }
+
+        return count;
+}
+EXPORT_SYMBOL(drm_edid_to_sad2);
+
 /**
  * drm_edid_to_speaker_allocation - extracts Speaker Allocation Data Blocks from EDID
  * @edid: EDID to parse

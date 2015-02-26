@@ -815,6 +815,49 @@ static int hdmi_tx_audio_info_setup(struct platform_device *pdev,
         return rc;
 } /* hdmi_tx_audio_info_setup */
 
+static int hdmi_tx_get_audio_edid_blk(struct platform_device *pdev,
+        struct msm_hdmi_audio_edid_blk *blk)
+{
+        struct hdmi *hdmi = platform_get_drvdata(pdev);
+	struct edid *edid;
+
+        edid = drm_get_edid(hdmi->connector, hdmi->i2c);
+
+        if (!hdmi) {
+                DBG("%s: invalid input\n", __func__);
+                return -ENODEV;
+        }
+
+	blk->spk_alloc_data_blk_size = drm_edid_to_speaker_allocation(edid, &blk->spk_alloc_data_blk);
+        if (blk->spk_alloc_data_blk_size < 0) {
+                DRM_DEBUG("Couldn't read Speaker Allocation Data Block: %d\n", blk->spk_alloc_data_blk_size);
+                blk->spk_alloc_data_blk_size = 0;
+        }
+	
+	blk->audio_data_blk_size = drm_edid_to_sad2(edid, &blk->audio_data_blk);
+	/*TODO extract adb from drm_edid_to_sad, remove sad2*/
+        if (blk->audio_data_blk_size < 0) {
+                DRM_DEBUG("Couldn't read SADs: %d\n", blk->audio_data_blk_size);
+                blk->audio_data_blk_size = 0;
+        }
+
+        return 0;
+} /* hdmi_tx_get_audio_edid_blk */
+
+static int hdmi_tx_get_cable_status(struct platform_device *pdev, u32 vote)
+{
+        struct hdmi *hdmi = platform_get_drvdata(pdev);
+        u32 hpd;
+
+        if (!hdmi) {
+                DBG("%s: invalid input\n", __func__);
+                return -ENODEV;
+        }
+
+        hpd = hdmi_read(hdmi, REG_HDMI_HPD_INT_STATUS);
+
+        return hpd;
+}
 
 int msm_hdmi_register_audio_codec(struct platform_device *pdev,
         struct msm_hdmi_audio_codec_ops *ops)
@@ -827,9 +870,8 @@ int msm_hdmi_register_audio_codec(struct platform_device *pdev,
         }
 
         ops->audio_info_setup = hdmi_tx_audio_info_setup;
-//        ops->get_audio_edid_blk = hdmi_tx_get_audio_edid_blk;
-//	ops->hdmi_cable_status = hdmi_tx_get_cable_status;
-
+        ops->get_audio_edid_blk = hdmi_tx_get_audio_edid_blk;
+	ops->hdmi_cable_status = hdmi_tx_get_cable_status;
         return 0;
 }
 EXPORT_SYMBOL(msm_hdmi_register_audio_codec);
