@@ -27,6 +27,14 @@
 #include "msm_drv.h"
 #include "hdmi.xml.h"
 
+/* Supported HDMI Audio channels */
+#define MSM_HDMI_AUDIO_CHANNEL_2        2
+#define MSM_HDMI_AUDIO_CHANNEL_3        3
+#define MSM_HDMI_AUDIO_CHANNEL_4        4
+#define MSM_HDMI_AUDIO_CHANNEL_5        5
+#define MSM_HDMI_AUDIO_CHANNEL_6        6
+#define MSM_HDMI_AUDIO_CHANNEL_7        7
+#define MSM_HDMI_AUDIO_CHANNEL_8        8
 
 struct hdmi_phy;
 struct hdmi_platform_config;
@@ -35,6 +43,11 @@ struct hdmi_audio {
 	bool enabled;
 	struct hdmi_audio_infoframe infoframe;
 	int rate;
+	int sample_rate;
+        int channel_num;
+        int spkr_alloc;
+        int level_shift;
+        int down_mix;
 };
 
 struct hdmi {

@@ -75,8 +75,14 @@ enum hdmi_acr_cts {
 
 #define REG_HDMI_AUDIO_PKT_CTRL1				0x00000020
 #define HDMI_AUDIO_PKT_CTRL1_AUDIO_SAMPLE_SEND			0x00000001
-
+#define HDMI_ACR_32_1                        0x70e0
+#define HDMI_ACR_32_0                        0x70dc
+#define HDMI_ACR_44_1                        0x70e8
+#define HDMI_ACR_44_0                        0x70e4
+#define HDMI_ACR_48_0                        0x70ec
+#define HDMI_ACR_48_1                        0x70f0
 #define REG_HDMI_ACR_PKT_CTRL					0x00000024
+#define HDMI_AUDIO_PKT_CTRL2             			(0x00000044)
 #define HDMI_ACR_PKT_CTRL_CONT					0x00000001
 #define HDMI_ACR_PKT_CTRL_SEND					0x00000002
 #define HDMI_ACR_PKT_CTRL_SELECT__MASK				0x00000030
