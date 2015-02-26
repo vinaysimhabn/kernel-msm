@@ -20,31 +20,9 @@
 #include "hdmi.h"
 #include <mach/msm_hdmi_audio_codec.h>
 
-enum msm_hdmi_supported_audio_sample_rates {
-        AUDIO_SAMPLE_RATE_32KHZ,
-        AUDIO_SAMPLE_RATE_44_1KHZ,
-        AUDIO_SAMPLE_RATE_48KHZ,
-        AUDIO_SAMPLE_RATE_88_2KHZ,
-        AUDIO_SAMPLE_RATE_96KHZ,
-        AUDIO_SAMPLE_RATE_176_4KHZ,
-        AUDIO_SAMPLE_RATE_192KHZ,
-        AUDIO_SAMPLE_RATE_MAX
-};
-
-/* parameters for clock regeneration */
-struct hdmi_tx_audio_acr {
-        u32 n;
-        u32 cts;
-};
-
-struct hdmi_tx_audio_acr_arry {
-        u32 pclk;
-        struct hdmi_tx_audio_acr lut[AUDIO_SAMPLE_RATE_MAX];
-};
-
 /* Audio constants lookup table for hdmi_tx_audio_acr_setup */
 /* Valid Pixel-Clock rates: 25.2MHz, 27MHz, 27.03MHz, 74.25MHz, 148.5MHz */
-static const struct hdmi_tx_audio_acr_arry hdmi_tx_audio_acr_lut[] = {
+static const struct hdmi_msm_audio_arcs hdmi_tx_audio_acr_lut[] = {
         /*  25.200MHz  */
         {25200, {{4096, 25200}, {6272, 28000}, {6144, 25200}, {12544, 28000},
                 {12288, 25200}, {25088, 28000}, {24576, 25200} } },
@@ -535,7 +513,7 @@ static int hdmi_tx_audio_acr_setup(struct hdmi *hdmi,
         acr_pck_ctrl_reg = hdmi_read(hdmi, REG_HDMI_ACR_PKT_CTRL);
 
         if (enabled) {
-                const struct hdmi_tx_audio_acr_arry *audio_acr =
+                const struct hdmi_msm_audio_arcs *audio_acr =
                         &hdmi_tx_audio_acr_lut[0];
                 const int lut_size = sizeof(hdmi_tx_audio_acr_lut)
                         / sizeof(*hdmi_tx_audio_acr_lut);
@@ -543,7 +521,7 @@ static int hdmi_tx_audio_acr_setup(struct hdmi *hdmi,
 
                 for (i = 0; i < lut_size;
                         audio_acr = &hdmi_tx_audio_acr_lut[++i]) {
-                        if (audio_acr->pclk == hdmi->pixclock)
+                        if (audio_acr->pixclock == hdmi->pixclock)
                                 break;
                 }
                 if (i >= lut_size) {

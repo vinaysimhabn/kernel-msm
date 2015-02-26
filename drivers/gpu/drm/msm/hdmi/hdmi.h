@@ -27,6 +27,17 @@
 #include "msm_drv.h"
 #include "hdmi.xml.h"
 
+enum msm_hdmi_supported_audio_sample_rates {
+        AUDIO_SAMPLE_RATE_32KHZ,
+        AUDIO_SAMPLE_RATE_44_1KHZ,
+        AUDIO_SAMPLE_RATE_48KHZ,
+        AUDIO_SAMPLE_RATE_88_2KHZ,
+        AUDIO_SAMPLE_RATE_96KHZ,
+        AUDIO_SAMPLE_RATE_176_4KHZ,
+        AUDIO_SAMPLE_RATE_192KHZ,
+        AUDIO_SAMPLE_RATE_MAX
+};
+
 /* Supported HDMI Audio channels */
 #define MSM_HDMI_AUDIO_CHANNEL_2        2
 #define MSM_HDMI_AUDIO_CHANNEL_3        3
@@ -35,6 +46,18 @@
 #define MSM_HDMI_AUDIO_CHANNEL_6        6
 #define MSM_HDMI_AUDIO_CHANNEL_7        7
 #define MSM_HDMI_AUDIO_CHANNEL_8        8
+
+struct hdmi_msm_audio_acr {
+        u32 n;     /* N parameter for clock regeneration */
+        u32 cts;   /* CTS parameter for clock regeneration */
+};
+
+struct hdmi_msm_audio_arcs {
+        u32 pixclock;
+        struct hdmi_msm_audio_acr lut[AUDIO_SAMPLE_RATE_MAX];
+};
+
+#define HDMI_MSM_AUDIO_ARCS(pclk, ...) { (1000 * (pclk)), __VA_ARGS__ }
 
 struct hdmi_phy;
 struct hdmi_platform_config;
