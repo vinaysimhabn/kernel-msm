@@ -18,6 +18,7 @@
 
 #include <linux/of_irq.h>
 #include "hdmi.h"
+#include <linux/of_platform.h>
 
 void hdmi_set_mode(struct hdmi *hdmi, bool power_on)
 {
@@ -257,6 +258,15 @@ int hdmi_modeset_init(struct hdmi *hdmi,
 				hdmi->irq, ret);
 		goto fail;
 	}
+
+	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+        if (ret) {
+                dev_err(dev->dev, "%s: Failed to add child devices. rc=%d\n",
+                        __func__, ret);
+                goto fail;
+        } else {
+                dev_dbg(dev->dev, "%s: Add child devices.\n", __func__);
+        }
 
 	encoder->bridge = hdmi->bridge;
 
