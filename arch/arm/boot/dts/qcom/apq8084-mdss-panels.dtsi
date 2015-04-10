@@ -17,3 +17,4 @@
 #include "dsi-panel-jdi-dualmipi1-cmd.dtsi"
 #include "dsi-panel-jdi-4k-dualmipi0-video.dtsi"
 #include "dsi-panel-jdi-4k-dualmipi1-video.dtsi"
+#include "dsi-panel-ifc-truly.dtsi"

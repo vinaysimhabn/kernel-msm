@@ -133,7 +133,7 @@
 		qcom,mdss-prefill-pingpong-buffer-pixels = <5120>;
 		qcom,mdss-prefill-fbc-lines = <2>;
 
-		connectors = <&mdss_hdmi_tx>;
+		connectors = <&mdss_hdmi_tx>,<&mdss_dsi0>;
 		gpus = <&msm_gpu>;
 
 		mdss_fb0: qcom,mdss_fb_primary {
@@ -155,15 +155,22 @@
 
 	mdss_dsi0: qcom,mdss_dsi@fd922800 {
 		compatible = "qcom,mdss-dsi-ctrl";
+		interrupt-parent = <&mdss_mdp>;
+		interrupts = <4 0>;   /* MDP5_HW_INTR_STATUS.INTR_DSI */
 		label = "MDSS DSI CTRL->0";
 		cell-index = <0>;
+		qcom,dsi-host-index = <0>;
 		reg = 	<0xfd922800 0x200>,
 			<0xfd922b00 0x2b0>,
 			<0xfd828000 0x108>;
-		reg-names = "dsi_ctrl", "dsi_phy", "mmss_misc_phys";
+		reg-names = "dsi_ctrl", "dsi_phy", "dsi_phy_regulator";
+		/*reg-names = "dsi_ctrl", "dsi_phy", "mmss_misc_phys";*/
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-supply = <&pma8084_l2>;
 		vdd-supply = <&pma8084_l22>;
+		vdddis28-supply = <&pma8084_l18>;
+		vdddis4-supply = <&pma8084_s4>;
+
 		vddio-supply = <&pma8084_l12>;
 		qcom,mdss-fb-map = <&mdss_fb0>;
 		qcom,mdss-mdp = <&mdss_mdp>;
@@ -238,8 +245,33 @@
 				qcom,supply-disable-load = <100>;
 				qcom,supply-post-on-sleep = <20>;
 			};
+
+			qcom,platform-supply-entry2 {
+				qcom,supply-name = "vdddis28";
+				qcom,supply-min-voltage = <2700000>;
+				qcom,supply-max-voltage = <2850000>;
+				qcom,supply-enable-load = <2850000>;
+				qcom,supply-disable-load = <100>;
+				qcom,supply-pre-on-sleep = <0>;
+				qcom,supply-post-on-sleep = <0>;
+				qcom,supply-pre-off-sleep = <0>;
+				qcom,supply-post-off-sleep = <0>;
+			};
+
+			qcom,platform-supply-entry3 {
+				qcom,supply-name = "vdddis4";
+				qcom,supply-min-voltage = <1800000>;
+				qcom,supply-max-voltage = <1800000>;
+				qcom,supply-enable-load = <1800000>;
+				qcom,supply-disable-load = <100>;
+				qcom,supply-pre-on-sleep = <0>;
+				qcom,supply-post-on-sleep = <0>;
+				qcom,supply-pre-off-sleep = <0>;
+				qcom,supply-post-off-sleep = <0>;
+			};
 		};
 	};
+		
 
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
 		compatible = "qcom,mdss-dsi-ctrl";

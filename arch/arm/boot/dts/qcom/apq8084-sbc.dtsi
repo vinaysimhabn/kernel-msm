@@ -95,19 +95,37 @@
 };
 
 &mdss_mdp {
-	qcom,mdss-pref-prim-intf = "hdmi";
+	qcom,mdss-pref-prim-intf = "dsi";
+	/*qcom,mdss-pref-prim-intf = "hdmi";*/
 };
 
-&mdss_hdmi_tx {
+#include "apq8084-mdss-panels.dtsi"
+
+&dsi_ifc_truly_vid {
+        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+        qcom,mdss-dsi-bl-pmic-pwm-frequency = <50>;
+        qcom,mdss-dsi-bl-pmic-bank-select = <2>;
+        qcom,mdss-dsi-pwm-gpio = <&pma8084_gpios 7 0>;
+};
+
+&mdss_dsi0 {
 	qcom,primary_panel = <1>;
-	qcom,mdss-fb-map = <&mdss_fb0>;
+	qcom,dsi-pref-prim-pan = <&dsi_ifc_truly_vid>;
+	qcom,platform-te-gpio = <&msmgpio 12 0>;
+	qcom,platform-reset-gpio = <&msmgpio 96 0>;
+	qcom,platform-enable-gpio = <&msmgpio 27 0>;
+	qcom,platform-bklight-en-gpio = <&msmgpio 86 0>;
+};
+&mdss_hdmi_tx {
+/*	qcom,primary_panel = <1>;
+	qcom,mdss-fb-map = <&mdss_fb0>;*/
 	hpd-5v-en-supply = <&vph_pwr_vreg>;
 	qcom,supply-names = "hpd-gdsc", "hpd-5v", "core-vdda", "core-vcc";
 	qcom,min-voltage-level = <0 0 1800000 1800000>;
 	qcom,max-voltage-level = <0 0 1800000 1800000>;
 	qcom,enable-load = <0 0 300000 0>;
 	qcom,disable-load = <0 0 0 0>;
-	status = "ok";
+/*	status = "ok";*/
 };
 
 &uart6 {
