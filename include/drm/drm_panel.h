@@ -137,4 +137,6 @@ static inline struct drm_panel *of_drm_find_panel(struct device_node *np)
 }
 #endif
 
+struct drm_panel *panel_simple_register_truly(struct device *dev, const char *name);
+
 #endif

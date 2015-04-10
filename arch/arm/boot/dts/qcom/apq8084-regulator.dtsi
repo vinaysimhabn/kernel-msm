@@ -104,9 +104,11 @@
 	rpm-regulator-smpa4 {
 		status = "okay";
 		pma8084_s4: regulator-s4 {
+			regulator-name = "8084_s4";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			qcom,init-voltage = <1800000>;
+			regulator-boot-on;
 			status = "okay";
 		};
 	};
@@ -307,9 +309,11 @@
 	rpm-regulator-ldoa18 {
 		status = "okay";
 		pma8084_l18: regulator-l18 {
+			regulator-name = "8084_l18";
 			regulator-min-microvolt = <2700000>;
 			regulator-max-microvolt = <2850000>;
 			qcom,init-voltage = <2850000>;
+			regulator-boot-on;
 			status = "okay";
 		};
 	};
