@@ -1401,10 +1401,10 @@ static int dsi_host_attach(struct mipi_dsi_host *host,
 	msm_host->panel_node = dsi->dev.of_node;
 
 	/* Some gpios defined in panel DT need to be controlled by host */
-	ret = dsi_host_init_panel_gpios(msm_host, &dsi->dev);
+/*	ret = dsi_host_init_panel_gpios(msm_host, &dsi->dev);
 	if (ret)
 		return ret;
-
+*/
 	DBG("id=%d", msm_host->id);
 	if (msm_host->dev)
 		drm_helper_hpd_irq_event(msm_host->dev);
@@ -1868,14 +1868,7 @@ int msm_dsi_host_power_on(struct mipi_dsi_host *host)
 	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
 	u32 clk_pre = 0, clk_post = 0;
 	int ret = 0;
-/*
-	msm_host->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST
-                | MIPI_DSI_MODE_VIDEO_HFP | MIPI_DSI_MODE_VIDEO_HBP
-                | MIPI_DSI_MODE_VIDEO_HSA | MIPI_DSI_MODE_EOT_PACKET
-                | MIPI_DSI_MODE_VSYNC_FLUSH | MIPI_DSI_MODE_VIDEO_AUTO_VERT;
-	msm_host->lanes = 2;
-	msm_host->format = MIPI_DSI_FMT_RGB888;
-*/
+
 	mutex_lock(&msm_host->dev_mutex);
 	if (msm_host->power_on) {
 		DBG("dsi host already on");
@@ -1902,12 +1895,10 @@ int msm_dsi_host_power_on(struct mipi_dsi_host *host)
 	}
 
 	dsi_phy_sw_reset(msm_host);
-	clk_set_rate(msm_host->esc_clk, 2);
-	printk("vinay******* esc_clk : %lu \n", clk_get_rate(msm_host->esc_clk));
+	clk_set_rate(msm_host->esc_clk, 19200000);
 	ret = msm_dsi_manager_phy_enable(msm_host->id,
 					msm_host->byte_clk_rate * 8,
-					19200000,
-					/*clk_get_rate(msm_host->esc_clk),*/
+					clk_get_rate(msm_host->esc_clk),
 					&clk_pre, &clk_post);
 	dsi_bus_clk_disable(msm_host);
 	if (ret) {

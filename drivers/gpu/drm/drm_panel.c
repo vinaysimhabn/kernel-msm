@@ -81,16 +81,13 @@ struct drm_panel *of_drm_find_panel(struct device_node *np)
 	struct drm_panel *panel;
 
 	mutex_lock(&panel_lock);
-	printk(" vinay drm_find_panel \n");
 	list_for_each_entry(panel, &panel_list, list) {
 		if (panel->dev->of_node == np) {
 			mutex_unlock(&panel_lock);
 			return panel;
 		}
 	}
-
 	mutex_unlock(&panel_lock);
-	printk(" vinay drm_find_panel NULL\n");
 	return NULL;
 }
 EXPORT_SYMBOL(of_drm_find_panel);
