@@ -56,6 +56,7 @@ static inline struct panel_otm8018b *to_panel_otm8018b(struct drm_panel *panel)
 static char enter_sleep[2] = {0x10, 0x00};
 static char write_memory105[1]={0x11};
 static char write_memory106[1]={0x29};
+static char pixels_on[1]={0x23};
 
 static void panel_otm8018b_destroy(struct drm_panel *panel)
 {
@@ -148,9 +149,11 @@ static int otm8018b_prepare(struct drm_panel *panel)
 	if (ret)
 		return ret;
 
-	mipi_dsi_generic_write(dsi,&write_memory105, sizeof(write_memory105));
+	mipi_dsi_dcs_write_buffer(dsi,&write_memory105, sizeof(write_memory105));
         mdelay(20);
-	mipi_dsi_generic_write(dsi,&write_memory106, sizeof(write_memory105));
+	mipi_dsi_dcs_write_buffer(dsi,&write_memory106, sizeof(write_memory105));
+        mdelay(5);
+	mipi_dsi_dcs_write_buffer(dsi,&pixels_on, sizeof(pixels_on));
         mdelay(5);
 
 	return 0;
@@ -169,7 +172,7 @@ static int otm8018b_unprepare(struct drm_panel *panel)
 	if (ret)
 		return ret;
 	
-	mipi_dsi_generic_write(dsi,&enter_sleep, sizeof(enter_sleep));
+	mipi_dsi_dcs_write_buffer(dsi,&enter_sleep, sizeof(enter_sleep));
 
 	return 0;
 }

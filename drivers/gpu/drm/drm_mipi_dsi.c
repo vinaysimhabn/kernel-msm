@@ -410,8 +410,6 @@ ssize_t mipi_dsi_generic_write(struct mipi_dsi_device *dsi, const void *payload,
 		.tx_len = size
 	};
 
-	msg.type = MIPI_DSI_DCS_SHORT_WRITE;
-/*
 	switch (size) {
 	case 0:
 		msg.type = MIPI_DSI_GENERIC_SHORT_WRITE_0_PARAM;
@@ -429,7 +427,6 @@ ssize_t mipi_dsi_generic_write(struct mipi_dsi_device *dsi, const void *payload,
 		msg.type = MIPI_DSI_GENERIC_LONG_WRITE;
 		break;
 	}
-*/
 
 	return mipi_dsi_device_transfer(dsi, &msg);
 }
