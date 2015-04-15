@@ -94,13 +94,12 @@ static enum drm_connector_status dsi_mgr_connector_detect(
 	struct msm_drm_private *priv = connector->dev->dev_private;
 	struct msm_kms *kms = priv->kms;
 
-	const char *panelname = "truly,otm8018b";
-
 	DBG("id=%d", id);
+	msm_dsi->panel = msm_dsi_host_get_panel(msm_dsi->host,
+					&msm_dsi->panel_flags);
 	if (!msm_dsi->panel) {
-	/*	msm_dsi->panel = msm_dsi_host_get_panel(msm_dsi->host,
-						&msm_dsi->panel_flags);*/
-		 msm_dsi->panel = panel_simple_register_truly(msm_dsi->host->dev, panelname);
+		msm_dsi->panel = msm_dsi_host_get_panel(msm_dsi->host,
+						&msm_dsi->panel_flags);
 
 		/* There is only 1 panel in the global panel list
 		 * for dual panel mode. Therefore slave dsi should get
@@ -674,7 +673,6 @@ int msm_dsi_manager_register(struct msm_dsi *msm_dsi)
 
 	if (!IS_DUAL_PANEL()) {
 		ret = msm_dsi_host_register(msm_dsi->host, true);
-		printk(" vinay ***** %d\n", ret);
 	} else if (!other_dsi) {
 		return 0;
 	} else {

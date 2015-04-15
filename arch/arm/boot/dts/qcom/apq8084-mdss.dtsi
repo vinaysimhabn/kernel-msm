@@ -161,9 +161,10 @@
 		cell-index = <0>;
 		qcom,dsi-host-index = <0>;
 		reg = 	<0xfd922800 0x200>,
-			<0xfd922b00 0x2b0>,
+			<0xfd922b00 0x20c>,
+			<0xfd922d80 0x20>,
 			<0xfd828000 0x108>;
-		reg-names = "dsi_ctrl", "dsi_phy", "dsi_phy_regulator";
+		reg-names = "dsi_ctrl", "dsi_phy", "dsi_phy_regulator", "mmss_misc_phys";
 		/*reg-names = "dsi_ctrl", "dsi_phy", "mmss_misc_phys";*/
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-supply = <&pma8084_l2>;
@@ -183,6 +184,13 @@
 			00 00 00 00 0a 00 00 01 97
 			00 00 00 00 0f 00 00 01 97
 			00 c0 00 00 00 00 00 01 bb];
+
+		panel@0 {
+			reg = <0>;
+			compatible = "truly,otm8018b";
+			disp-enable-gpios = <&msmgpio 27 0>;
+			disp-te-gpios = <&msmgpio 12 0>;
+		};
 
 		qcom,core-supply-entries {
 			#address-cells = <1>;
