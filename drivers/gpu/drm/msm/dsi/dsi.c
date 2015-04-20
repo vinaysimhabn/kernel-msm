@@ -155,6 +155,7 @@ int msm_dsi_modeset_init(struct msm_dsi *msm_dsi, struct drm_device *dev,
 		struct drm_encoder *encoders[MSM_DSI_ENCODER_NUM])
 {
 	struct msm_drm_private *priv = dev->dev_private;
+	struct platform_device *pdev = msm_dsi->pdev;
 	int ret, i;
 
 	if (WARN_ON(!encoders[MSM_DSI_VIDEO_ENCODER_ID] ||
@@ -190,8 +191,12 @@ int msm_dsi_modeset_init(struct msm_dsi *msm_dsi, struct drm_device *dev,
 		msm_dsi->encoders[i] = encoders[i];
 	}
 
+	drm_mode_connector_attach_encoder(msm_dsi->connector, msm_dsi->encoders[0]);
+
 	priv->bridges[priv->num_bridges++]       = msm_dsi->bridge;
 	priv->connectors[priv->num_connectors++] = msm_dsi->connector;
+
+	platform_set_drvdata(pdev, msm_dsi);
 
 	return 0;
 fail:

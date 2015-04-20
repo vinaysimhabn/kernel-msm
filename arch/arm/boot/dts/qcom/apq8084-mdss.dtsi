@@ -184,12 +184,26 @@
 			00 00 00 00 0a 00 00 01 97
 			00 00 00 00 0f 00 00 01 97
 			00 c0 00 00 00 00 00 01 bb];
-
 		panel@0 {
 			reg = <0>;
 			compatible = "truly,otm8018b";
 			disp-enable-gpios = <&msmgpio 27 0>;
 			disp-te-gpios = <&msmgpio 12 0>;
+
+			display-timings {
+				native-mode = <&timing0>;
+		                timing0: 800x480 {
+		                        clock-frequency = <30810000>;
+					hactive = <480>;
+		                        vactive = <864>;
+					hfront-porch = <46>;
+					hback-porch = <44>;
+					hsync-len = <4>;
+					vback-porch = <16>;
+					vfront-porch = <15>;
+					vsync-len = <1>;
+				};
+			};
 		};
 
 		qcom,core-supply-entries {
