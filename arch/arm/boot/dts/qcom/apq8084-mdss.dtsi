@@ -184,7 +184,7 @@
 			00 00 00 00 0a 00 00 01 97
 			00 00 00 00 0f 00 00 01 97
 			00 c0 00 00 00 00 00 01 bb];
-		/*panel@0 {
+		panel@0 {
 			reg = <0>;
 			compatible = "truly,otm8018b";
 			disp-enable-gpios = <&msmgpio 27 0>;
@@ -204,9 +204,9 @@
 					vsync-len = <1>;
 				};
 			};
-		};*/
+		};
 
-
+/*
 		panel@0 {
 			reg = <0>;
 			compatible = "truly,jdi";
@@ -229,7 +229,7 @@
 
 			};
 		};
-
+*/
 		qcom,core-supply-entries {
 			#address-cells = <1>;
 			#size-cells = <0>;

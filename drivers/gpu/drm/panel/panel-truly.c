@@ -328,7 +328,7 @@ static int otm8018b_prepare(struct drm_panel *panel)
 	ret = panel_otm8018b_power_on(panel_otm8018b);
 	if (ret)
 		return ret;
-if(0)
+//if(0)
 {	
 	mipi_dsi_generic_write(dsi, &write_memory1, sizeof(write_memory1));
 	mipi_dsi_generic_write(dsi, &write_memory2, sizeof(write_memory2));
@@ -524,7 +524,7 @@ static int otm8018b_probe(struct mipi_dsi_device *dsi)
 
         dsi->lanes = 2;
         dsi->format = MIPI_DSI_FMT_RGB888;
-        dsi->mode_flags = MIPI_DSI_MODE_VIDEO ;
+        dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_LPM;
 
         panel_otm8018b->disp_en_gpio = 27;
         ret = gpio_request(panel_otm8018b->disp_en_gpio, "disp_en_gpio");
