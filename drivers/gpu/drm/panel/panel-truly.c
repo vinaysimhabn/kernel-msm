@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <linux/backlight.h>
 #include <drm/drmP.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
@@ -37,6 +38,7 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 
+extern struct backlight_device *global_bl;
 struct panel_otm8018b {
 	struct device *dev;
 	struct drm_panel panel;
@@ -45,6 +47,7 @@ struct panel_otm8018b {
 	int lcd_reset_gpio;
 	int disp_en_gpio;
 	int backlight;
+	struct backlight_device *backlight_pwm;
 	struct videomode vm;
 };
 
@@ -492,12 +495,26 @@ static int otm8018b_get_modes(struct drm_panel *panel)
 
 static int otm8018b_enable(struct drm_panel *panel)
 {
-        return 0;
+	struct panel_otm8018b *panel_otm8018b = to_panel_otm8018b(panel);
+
+	if (panel_otm8018b->backlight_pwm) {
+		panel_otm8018b->backlight_pwm->props.power = FB_BLANK_UNBLANK;
+		backlight_update_status(panel_otm8018b->backlight_pwm);
+	}
+
+	return 0;
 }
 
 static int otm8018b_disable(struct drm_panel *panel)
 {
-        return 0;
+	struct panel_otm8018b *panel_otm8018b = to_panel_otm8018b(panel);
+
+	if (panel_otm8018b->backlight_pwm) {
+		panel_otm8018b->backlight_pwm->props.power = FB_BLANK_POWERDOWN;
+		backlight_update_status(panel_otm8018b->backlight_pwm);
+	}
+
+	return 0;
 }
 
 static const struct drm_panel_funcs otm8018b_drm_funcs = {
@@ -511,7 +528,8 @@ static const struct drm_panel_funcs otm8018b_drm_funcs = {
 static int otm8018b_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
-        struct panel_otm8018b *panel_otm8018b;
+	struct device_node *backlight;
+	struct panel_otm8018b *panel_otm8018b;
         int ret;
 
         panel_otm8018b = devm_kzalloc(dev, sizeof(struct panel_otm8018b), GFP_KERNEL);
@@ -526,7 +544,16 @@ static int otm8018b_probe(struct mipi_dsi_device *dsi)
         dsi->format = MIPI_DSI_FMT_RGB888;
         dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_LPM;
 
-        panel_otm8018b->disp_en_gpio = 27;
+	backlight = of_parse_phandle(panel_otm8018b->dev->of_node, "backlight", 0);
+        if (backlight) {
+                panel_otm8018b->backlight_pwm = of_find_backlight_by_node(backlight);
+                of_node_put(backlight);
+
+                if (!panel_otm8018b->backlight_pwm)
+                        return -EPROBE_DEFER;
+        }
+
+	panel_otm8018b->disp_en_gpio = 27;
         ret = gpio_request(panel_otm8018b->disp_en_gpio, "disp_en_gpio");
         if (ret) {
                 dev_err(dev, "failed to request disp_en_gpio: %d\n", ret);

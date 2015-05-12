@@ -64,6 +64,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 		duty_cycle = pb->lth_brightness +
 		     (duty_cycle * (pb->period - pb->lth_brightness) / max);
+		pwm_disable(pb->pwm);
 		pwm_config(pb->pwm, duty_cycle, pb->period);
 		pwm_enable(pb->pwm);
 	}
