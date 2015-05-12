@@ -189,6 +189,7 @@
 			compatible = "truly,otm8018b";
 			disp-enable-gpios = <&msmgpio 27 0>;
 			disp-te-gpios = <&msmgpio 12 0>;
+			backlight = <&backlight>;
 
 			display-timings {
 				native-mode = <&timing0>;
@@ -317,7 +318,15 @@
 			};
 		};
 	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
 		
+		pwms = <&pma8084_lpg3 0 50000>;
+		brightness-levels = <0 16 32 48 64 80 96 112 128 144 160 176 192 208 224 240 255>;
+		default-brightness-level = <15>;
+		pwm-names = "backlight-ifc6540";
+	};
 
 	mdss_dsi1: qcom,mdss_dsi@fd922e00 {
 		compatible = "qcom,mdss-dsi-ctrl";
