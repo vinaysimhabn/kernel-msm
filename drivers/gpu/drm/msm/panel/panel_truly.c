@@ -368,9 +368,11 @@ static int panel_truly_on(struct panel *panel)
 	});
 
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
-		.low_power = false,
+		.low_power = true,
 		.lanes = 0x3,
 	});
+
+	mdelay(20);
 
 	mipi_on(mipi);
 	mipi_lwrite(mipi, true, 0, write_memory1);
@@ -481,6 +483,11 @@ static int panel_truly_on(struct panel *panel)
         mdelay(20);
         mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
         mdelay(5);
+
+	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
+		.low_power = false,
+		.lanes = 0x3,
+	});
 
 	return 0;
 }

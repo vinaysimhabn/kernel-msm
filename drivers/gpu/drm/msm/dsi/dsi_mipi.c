@@ -74,12 +74,12 @@ static int dsi_mipi_set_bus_config(struct mipi_adapter *mipi,
 {
 	struct dsi_mipi_adapter *dsi_mipi = to_dsi_mipi_adapter(mipi);
 	struct dsi *dsi = dsi_mipi->dsi;
-	uint32_t ctrl;
+/*	uint32_t ctrl;*/
 
 	dsi_write(dsi, REG_DSI_CMD_DMA_CTRL,
 			COND(bcfg->low_power, DSI_CMD_DMA_CTRL_LOW_POWER) |
 			DSI_CMD_DMA_CTRL_FROM_FRAME_BUFFER);
-
+/*
 	ctrl = dsi_read(dsi, REG_DSI_CTRL);
 	ctrl &= ~(DSI_CTRL_LANE0 | DSI_CTRL_LANE1 | DSI_CTRL_LANE2 | DSI_CTRL_LANE3);
 	dsi_write(dsi, REG_DSI_CTRL,
@@ -88,7 +88,7 @@ static int dsi_mipi_set_bus_config(struct mipi_adapter *mipi,
 			COND(bcfg->lanes & 0x2, DSI_CTRL_LANE1) |
 			COND(bcfg->lanes & 0x4, DSI_CTRL_LANE2) |
 			COND(bcfg->lanes & 0x8, DSI_CTRL_LANE3));
-
+*/
 	return 0;
 }
 
@@ -141,6 +141,7 @@ static int dsi_mipi_set_panel_config(struct mipi_adapter *mipi,
 	ctrl = dsi_read(dsi, REG_DSI_CTRL);
 	ctrl &= DSI_CTRL_ENABLE | DSI_CTRL_VID_MODE_EN | DSI_CTRL_CMD_MODE_EN |
 			DSI_CTRL_LANE0 | DSI_CTRL_LANE1 | DSI_CTRL_LANE2 | DSI_CTRL_LANE3;
+	ctrl |= (DSI_CTRL_LANE0 | DSI_CTRL_LANE1);
 	dsi_write(dsi, REG_DSI_CTRL,
 			ctrl |
 			DSI_CTRL_CLK_EN |
