@@ -272,12 +272,13 @@ static int panel_truly_power_on(struct panel *panel)
 		dev_err(dev->dev, "failed to enable s4: %d\n", ret);
 		goto fail2;
 	}
-	mdelay(2);
+//	mdelay(2);
 	gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
-        mdelay(1);
+        mdelay(1);/*Reset display 1 ms*/
         gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 0);
         usleep(50);
         gpio_set_value_cansleep(panel_truly->pmic8821_mpp2, 1);
+        mdelay(5);
 
 	return 0;
 
@@ -367,14 +368,15 @@ static int panel_truly_on(struct panel *panel)
 		},
 	});
 
+
+	mipi_on(mipi);
+	/*Initial setting in LP mode*/
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
 		.low_power = true,
 		.lanes = 0x3,
 	});
 
-	mdelay(20);
-
-	mipi_on(mipi);
+	mdelay(5);
 	mipi_lwrite(mipi, true, 0, write_memory1);
 	mipi_gen_write(mipi, true, 0, write_memory2);
 	mipi_lwrite(mipi, true, 0, write_memory3);
@@ -478,16 +480,16 @@ static int panel_truly_on(struct panel *panel)
 	mipi_gen_write(mipi, true, 0, write_memory102);
 	mipi_gen_write(mipi, true, 0, write_memory103);
 	mipi_gen_write(mipi, true, 0, write_memory104);
-	mdelay(250);
-	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]); 
-        mdelay(20);
-        mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
-        mdelay(5);
-
+	
 	mipi_set_bus_config(mipi, &(struct mipi_bus_config){
 		.low_power = false,
 		.lanes = 0x3,
 	});
+
+	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]); 
+        mdelay(120);
+        mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
+        mdelay(10);
 
 	return 0;
 }
