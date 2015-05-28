@@ -85,6 +85,7 @@ struct mipi_adapter_funcs {
 
 struct mipi_adapter {
 	const struct mipi_adapter_funcs *funcs;
+	int wait;
 };
 
 static inline int mipi_adapter_init(struct mipi_adapter *mipi,

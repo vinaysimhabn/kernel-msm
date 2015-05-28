@@ -231,6 +231,8 @@ static int dsi_mipi_write(struct mipi_adapter *mipi, const u8 *data, size_t len)
 		ret = -ETIMEDOUT;
 	}
 
+	msleep(mipi->wait);
+
 	if (ctrl & DSI_CTRL_VID_MODE_EN)
 		dsi_write(dsi, REG_DSI_CTRL, ctrl);
 

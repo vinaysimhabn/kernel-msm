@@ -376,8 +376,9 @@ static int panel_truly_on(struct panel *panel)
 		.lanes = 0x3,
 	});
 
-	mdelay(5);
+	mipi->wait=5;
 	mipi_lwrite(mipi, true, 0, write_memory1);
+	mipi->wait=0;
 	mipi_gen_write(mipi, true, 0, write_memory2);
 	mipi_lwrite(mipi, true, 0, write_memory3);
 	mipi_gen_write(mipi, true, 0, write_memory4);
@@ -486,8 +487,9 @@ static int panel_truly_on(struct panel *panel)
 		.lanes = 0x3,
 	});
 
+	mipi->wait=10;
 	mipi_dcs_swrite(mipi, true, 0, false,write_memory105[0]); 
-        mdelay(120);
+	mipi->wait=200;
         mipi_dcs_swrite(mipi, true, 0, false, write_memory106[0]);
         mdelay(10);
 
