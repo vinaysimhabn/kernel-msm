@@ -81,7 +81,8 @@ struct msm_drm_private {
 	 * place to keep the edp instance.
 	 */
 	struct msm_edp *edp;
-	
+
+	/* DSI is shared by mdp4 and mdp5 */
 	struct msm_dsi *dsi[2];
 
 	/* when we have more than one 'msm_gpu' these need to be an array: */
@@ -240,15 +241,15 @@ int msm_edp_modeset_init(struct msm_edp *edp, struct drm_device *dev,
 
 struct msm_dsi;
 enum msm_dsi_encoder_id {
-        MSM_DSI_VIDEO_ENCODER_ID = 0,
-        MSM_DSI_CMD_ENCODER_ID = 1,
-        MSM_DSI_ENCODER_NUM = 2
+	MSM_DSI_VIDEO_ENCODER_ID = 0,
+	MSM_DSI_CMD_ENCODER_ID = 1,
+	MSM_DSI_ENCODER_NUM = 2
 };
 #ifdef CONFIG_DRM_MSM_DSI
 void __init msm_dsi_register(void);
 void __exit msm_dsi_unregister(void);
 int msm_dsi_modeset_init(struct msm_dsi *msm_dsi, struct drm_device *dev,
-                struct drm_encoder *encoders[MSM_DSI_ENCODER_NUM]);
+		struct drm_encoder *encoders[MSM_DSI_ENCODER_NUM]);
 #else
 static inline void __init msm_dsi_register(void)
 {
@@ -257,10 +258,10 @@ static inline void __exit msm_dsi_unregister(void)
 {
 }
 static inline int msm_dsi_modeset_init(struct msm_dsi *msm_dsi,
-                struct drm_device *dev,
-                struct drm_encoder *encoders[MSM_DSI_ENCODER_NUM])
+		struct drm_device *dev,
+		struct drm_encoder *encoders[MSM_DSI_ENCODER_NUM])
 {
-        return -EINVAL;
+	return -EINVAL;
 }
 #endif
 
