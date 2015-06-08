@@ -93,9 +93,8 @@ static int dsi_dphy_timing_calc(struct dsi_dphy_timing *timing,
 	s32 temp;
 
 	if (!bit_rate || !esc_rate)
-	{
 		return -EINVAL;
-	}
+
 	ui = mult_frac(NSEC_PER_MSEC, coeff, bit_rate / 1000);
 	lpx = mult_frac(NSEC_PER_MSEC, coeff, esc_rate / 1000);
 

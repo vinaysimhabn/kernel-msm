@@ -21,9 +21,11 @@
 
 static void msm_fb_output_poll_changed(struct drm_device *dev)
 {
+#ifdef CONFIG_DRM_MSM_FBDEV
 	struct msm_drm_private *priv = dev->dev_private;
 	if (priv->fbdev)
 		drm_fb_helper_hotplug_event(priv->fbdev);
+#endif
 }
 
 static const struct drm_mode_config_funcs mode_config_funcs = {
@@ -143,8 +145,8 @@ static int msm_unload(struct drm_device *dev)
 	if (gpu) {
 		mutex_lock(&dev->struct_mutex);
 		gpu->funcs->pm_suspend(gpu);
-		gpu->funcs->destroy(gpu);
 		mutex_unlock(&dev->struct_mutex);
+		gpu->funcs->destroy(gpu);
 	}
 
 	if (priv->vram.paddr) {
@@ -177,7 +179,7 @@ static int get_mdp_ver(struct platform_device *pdev)
 	const struct of_device_id *match;
 	match = of_match_node(match_types, dev->of_node);
 	if (match)
-		return (int)match->data;
+		return (int)(unsigned long)match->data;
 #endif
 	return 4;
 }
@@ -373,9 +375,11 @@ static void msm_preclose(struct drm_device *dev, struct drm_file *file)
 
 static void msm_lastclose(struct drm_device *dev)
 {
+#ifdef CONFIG_DRM_MSM_FBDEV
 	struct msm_drm_private *priv = dev->dev_private;
 	if (priv->fbdev)
 		drm_fb_helper_restore_fbdev_mode_unlocked(priv->fbdev);
+#endif
 }
 
 static irqreturn_t msm_irq(int irq, void *arg)

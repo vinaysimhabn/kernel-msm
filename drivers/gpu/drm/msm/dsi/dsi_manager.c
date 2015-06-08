@@ -95,8 +95,6 @@ static enum drm_connector_status dsi_mgr_connector_detect(
 	struct msm_kms *kms = priv->kms;
 
 	DBG("id=%d", id);
-	msm_dsi->panel = msm_dsi_host_get_panel(msm_dsi->host,
-					&msm_dsi->panel_flags);
 	if (!msm_dsi->panel) {
 		msm_dsi->panel = msm_dsi_host_get_panel(msm_dsi->host,
 						&msm_dsi->panel_flags);
@@ -499,7 +497,7 @@ struct drm_connector *msm_dsi_manager_connector_init(u8 id)
 
 	for (i = 0; i < MSM_DSI_ENCODER_NUM; i++)
 		drm_mode_connector_attach_encoder(connector,
-					msm_dsi->encoders[i]);
+						msm_dsi->encoders[i]);
 
 	return connector;
 
