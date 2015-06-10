@@ -246,16 +246,9 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	}
 	priv->planes[priv->num_planes++] = plane;
 
-	/*
-	 * Setup the LCDC/LVDS path: RGB2 -> DMA_P -> LCDC -> LVDS:
-	 */
-
-	panel = detect_panel(dev, "qcom,lvds-panel");
-	if (IS_ERR(panel)) {
-		ret = PTR_ERR(panel);
-		dev_err(dev->dev, "failed to detect LVDS panel: %d\n", ret);
-		goto fail;
-	}
+        /*
+         * Setup the DSI path: RGB2 -> DMA_P -> DSI:
+         */
 
 	plane = mdp4_plane_init(dev, RGB2, true);
 	if (IS_ERR(plane)) {
@@ -271,6 +264,50 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		goto fail;
 	}
 
+        encoder = mdp4_dsi_encoder_init(dev);
+        if (IS_ERR(encoder)) {
+                dev_err(dev->dev, "failed to construct DSI encoder\n");
+                ret = PTR_ERR(encoder);
+                goto fail;
+        }
+
+        encoder->possible_crtcs = 1 << priv->num_crtcs;
+
+        priv->crtcs[priv->num_crtcs++] = crtc;
+        priv->encoders[priv->num_encoders++] = encoder;
+
+	/* Create DSI connector/bridge: */
+        ret = dsi_init(dev, encoder);
+        if (ret) {
+                dev_err(dev->dev, "failed to initialize DSI\n");
+                goto fail;
+        }
+
+	/*
+	 * Setup the LCDC/LVDS path: RGB2 -> DMA_P -> LCDC -> LVDS:
+	 */
+
+	panel = detect_panel(dev, "qcom,lvds-panel");
+	if (IS_ERR(panel)) {
+		ret = PTR_ERR(panel);
+		dev_err(dev->dev, "failed to detect LVDS panel: %d\n", ret);
+		goto fail;
+	}
+
+	plane = mdp4_plane_init(dev, RGB3, true);
+	if (IS_ERR(plane)) {
+		dev_err(dev->dev, "failed to construct plane for RGB2\n");
+		ret = PTR_ERR(plane);
+		goto fail;
+	}
+
+	crtc  = mdp4_crtc_init(dev, plane, priv->num_crtcs, 0, DMA_S);
+	if (IS_ERR(crtc)) {
+		dev_err(dev->dev, "failed to construct crtc for DMA_P\n");
+		ret = PTR_ERR(crtc);
+		goto fail;
+	}
+
 	encoder = mdp4_lcdc_encoder_init(dev, panel);
 	if (IS_ERR(encoder)) {
 		dev_err(dev->dev, "failed to construct LCDC encoder\n");
@@ -278,7 +315,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 		goto fail;
 	}
 
-	/* LCDC can be hooked to DMA_P: */
+	// LCDC can be hooked to DMA_P:
 	encoder->possible_crtcs = 1 << priv->num_crtcs;
 
 	priv->crtcs[priv->num_crtcs++] = crtc;

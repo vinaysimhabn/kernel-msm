@@ -2815,6 +2815,7 @@ void __init msm_rotator_set_split_iommu_domain(void)
 
 #define MIPI_DSI_HW_BASE        0x04700000
 #define MDP_HW_BASE             0x05100000
+#define MMSS_SFPB_BASE_PHY      0x05700000
 
 static struct resource msm_mipi_dsi1_resources[] = {
 	{
@@ -2823,6 +2824,18 @@ static struct resource msm_mipi_dsi1_resources[] = {
 		.end    = MIPI_DSI_HW_BASE + 0x000F0000 - 1,
 		.flags  = IORESOURCE_MEM,
 	},
+	{
+                .name   = "mmss_sfpb",
+                .start  = MMSS_SFPB_BASE_PHY,
+                .end    = MMSS_SFPB_BASE_PHY + 0x100 - 1,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+                .name   = "mmss_cc",
+                .start  = MSM8960_MMSS_CLK_CTL_PHYS,
+                .end    = MSM8960_MMSS_CLK_CTL_PHYS + 0x1000 - 1,
+                .flags  = IORESOURCE_MEM,
+        },
 	{
 		.start  = DSI1_IRQ,
 		.end    = DSI1_IRQ,

@@ -67,6 +67,8 @@ VREG_CONSUMERS(L8) = {
 	REGULATOR_SUPPLY("cam_vana",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vana",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vana",		"4-0020"),
+	REGULATOR_SUPPLY("dsi1_avdd",           "mdp.0"), /* MIPI DSI */
+        REGULATOR_SUPPLY("dsi1_vddio",          "mdp.0"), /* MIPI DSI */
 };
 VREG_CONSUMERS(L9) = {
 	REGULATOR_SUPPLY("8921_l9",		NULL),
@@ -108,6 +110,7 @@ VREG_CONSUMERS(L16) = {
 	REGULATOR_SUPPLY("cam_vaf",		"4-006c"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0034"),
 	REGULATOR_SUPPLY("cam_vaf",		"4-0020"),
+	REGULATOR_SUPPLY("dsi1_l16",    "mdp.0"), /* MIPI DSI - this required for 6440 board*/
 };
 VREG_CONSUMERS(L17) = {
 	REGULATOR_SUPPLY("8921_l17",		NULL),
@@ -187,6 +190,7 @@ VREG_CONSUMERS(S4) = {
 	REGULATOR_SUPPLY("hdmi_lvl_tsl",	"hdmi_msm.0"),
 	REGULATOR_SUPPLY("vdd-io",		"spi0.2"),
 	REGULATOR_SUPPLY("sata_pmp_pwr",	"msm_sata.0"),
+	REGULATOR_SUPPLY("dsi1_s4_iovdd",       "mdp.0"), /* MIPI DSI */
 };
 VREG_CONSUMERS(S5) = {
 	REGULATOR_SUPPLY("8921_s5",		NULL),
@@ -256,6 +260,7 @@ VREG_CONSUMERS(EXT_3P3V) = {
 	REGULATOR_SUPPLY("vdd-phy",		"spi0.2"),
 	REGULATOR_SUPPLY("mhl_usb_hs_switch",	"msm_otg"),
 	REGULATOR_SUPPLY("lvds-vccs-3p3v",      "mdp.0"),
+	REGULATOR_SUPPLY("dsi1_vccs_3p3v",      "mdp.0"), /*MIPI DSI*/
 	REGULATOR_SUPPLY("dsi1_vccs_3p3v",      "mipi_dsi.1"),
 	REGULATOR_SUPPLY("hdmi_mux_vdd",        "hdmi_msm.0"),
 	REGULATOR_SUPPLY("pcie_ext_3p3v",       "msm_pcie"),
@@ -682,7 +687,8 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 	RPM_LDO(L5,  0, 1, 0, 2950000, 2950000, NULL,          0,     0),
 	RPM_LDO(L6,  0, 1, 0, 2950000, 2950000, NULL,          0,     0),
 	RPM_LDO(L7,  0, 1, 0, 1850000, 2950000, NULL,          0,     0),
-	RPM_LDO(L8,  0, 1, 0, 2800000, 2800000, NULL,          0,     0),
+/*	RPM_LDO(L8,  0, 1, 0, 2800000, 2800000, NULL,          0,     0),*/
+	RPM_LDO(L8,  0, 1, 0, 3300000, 3300000, NULL,          0,     0), /*MIPI DSI*/
 	RPM_LDO(L9,  0, 1, 0, 3000000, 3000000, NULL,          0,     0),
 	RPM_LDO(L10, 0, 1, 0, 2900000, 2900000, NULL,          0,     0),
 	RPM_LDO(L11, 0, 1, 0, 3000000, 3000000, NULL,          0,     0),
@@ -703,7 +709,8 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 	RPM_LDO(L29, 0, 1, 0, 2000000, 2000000, NULL,          0,     0),
 
 	/*     ID  a_on pd ss                   supply */
-	RPM_VS(LVS1, 0, 1, 0,                   "8921_s4"),
+/*	RPM_VS(LVS1, 0, 1, 0,                   "8921_s4"),*/
+	RPM_VS(LVS1, 1, 1, 0,                   "8921_s4"), /* MIPI DSI keep always ON */
 	RPM_VS(LVS3, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS4, 0, 1, 0,                   "8921_s4"),
 	RPM_VS(LVS5, 0, 1, 0,                   "8921_s4"),
