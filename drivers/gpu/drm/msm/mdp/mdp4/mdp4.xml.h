@@ -106,6 +106,12 @@ static inline uint32_t MDP4_VERSION_MAJOR(uint32_t val)
 {
 	return ((val) << MDP4_VERSION_MAJOR__SHIFT) & MDP4_VERSION_MAJOR__MASK;
 }
+#define MDP4_VERSION_PHY__MASK				0x0000ff00
+#define MDP4_VERSION_PHY__SHIFT				8
+static inline uint32_t MDP4_VERSION_PHY(uint32_t val)
+{
+	return ((val) << MDP4_VERSION_PHY__SHIFT) & MDP4_VERSION_PHY__MASK;
+}
 
 #define REG_MDP4_OVLP0_KICK					0x00000004
 

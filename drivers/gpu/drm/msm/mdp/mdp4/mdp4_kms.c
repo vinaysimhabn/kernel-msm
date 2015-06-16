@@ -26,7 +26,7 @@ static int mdp4_hw_init(struct msm_kms *kms)
 {
 	struct mdp4_kms *mdp4_kms = to_mdp4_kms(to_mdp_kms(kms));
 	struct drm_device *dev = mdp4_kms->dev;
-	uint32_t version, major, minor, dmap_cfg, vg_cfg;
+	uint32_t version, major, minor, phy, dmap_cfg, vg_cfg;
 	unsigned long clk;
 	int ret = 0;
 
@@ -38,8 +38,10 @@ static int mdp4_hw_init(struct msm_kms *kms)
 
 	major = FIELD(version, MDP4_VERSION_MAJOR);
 	minor = FIELD(version, MDP4_VERSION_MINOR);
+	phy = FIELD(version, MDP4_VERSION_PHY);
 
 	DBG("found MDP4 version v%d.%d", major, minor);
+	DBG("MDP4 PHY version v%d", phy);
 
 	if (major != 4) {
 		dev_err(dev->dev, "unexpected MDP version: v%d.%d\n",
@@ -193,6 +195,7 @@ int mdp4_enable(struct mdp4_kms *mdp4_kms)
 	return 0;
 }
 
+#ifdef CONFIG_DRM_MSM_LVDS
 #ifdef CONFIG_OF
 static struct drm_panel *detect_panel(struct drm_device *dev, const char *name)
 {
@@ -216,7 +219,7 @@ static struct drm_panel *detect_panel(struct drm_device *dev, const char *name)
 	return panel_simple_register(dev->dev, panelname);
 }
 #endif
-
+#endif
 static int modeset_init(struct mdp4_kms *mdp4_kms)
 {
 	struct drm_device *dev = mdp4_kms->dev;
@@ -224,8 +227,10 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 	struct drm_plane *plane;
 	struct drm_crtc *crtc;
 	struct drm_encoder *encoder;
+#ifdef CONFIG_DRM_MSM_LVDS
 	struct drm_connector *connector;
 	struct drm_panel *panel;
+#endif
 	struct hdmi *hdmi;
 	int ret;
 
@@ -283,8 +288,9 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
                 goto fail;
         }
 
+#ifdef CONFIG_DRM_MSM_LVDS
 	/*
-	 * Setup the LCDC/LVDS path: RGB2 -> DMA_P -> LCDC -> LVDS:
+	 * Setup the LCDC/LVDS path: RGB3 -> DMA_P -> LCDC -> LVDS:
 	 */
 
 	panel = detect_panel(dev, "qcom,lvds-panel");
@@ -330,6 +336,7 @@ static int modeset_init(struct mdp4_kms *mdp4_kms)
 
 	priv->connectors[priv->num_connectors++] = connector;
 
+#endif
 	/*
 	 * Setup DTV/HDMI path: RGB1 -> DMA_E -> DTV -> HDMI:
 	 */

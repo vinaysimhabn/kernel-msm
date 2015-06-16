@@ -27,9 +27,6 @@ msm-y := \
 	mdp/mdp_kms.o \
 	mdp/mdp4/mdp4_crtc.o \
 	mdp/mdp4/mdp4_dtv_encoder.o \
-	mdp/mdp4/mdp4_lcdc_encoder.o \
-	mdp/mdp4/mdp4_lvds_connector.o \
-	mdp/mdp4/mdp4_lvds_pll.o \
         mdp/mdp4/mdp4_dsi_encoder.o \
 	mdp/mdp4/mdp4_irq.o \
 	mdp/mdp4/mdp4_kms.o \
@@ -53,6 +50,10 @@ msm-y := \
 	msm_rd.o \
 	msm_ringbuffer.o
 
+msm-$(CONFIG_DRM_MSM_LVDS) +=   mdp/mdp4/mdp4_lcdc_encoder.o \
+        mdp/mdp4/mdp4_lvds_connector.o \
+        mdp/mdp4/mdp4_lvds_pll.o
+ 
 msm-$(CONFIG_DRM_MSM_FBDEV) += msm_fbdev.o
 
 obj-$(CONFIG_DRM_MSM)	+= msm.o
