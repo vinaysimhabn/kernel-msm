@@ -248,15 +248,15 @@
 
 			led@5 {
 				label = "apq8016-sbc:yellow:wlan";
-				gpios = <&pm8916_mpps 2 GPIO_ACTIVE_HIGH>;
-				linux,default-trigger = "wlan";
+				gpios = <&pm8916_mpps 3 GPIO_ACTIVE_HIGH>;
+				linux,default-trigger = "rfkill0";
 				default-state = "off";
 			};
 
 			led@6 {
 				label = "apq8016-sbc:blue:bt";
-				gpios = <&pm8916_mpps 3 GPIO_ACTIVE_HIGH>;
-				linux,default-trigger = "bt";
+				gpios = <&pm8916_mpps 2 GPIO_ACTIVE_HIGH>;
+				linux,default-trigger = "rfkill1";
 				default-state = "off";
 			};
 		};
