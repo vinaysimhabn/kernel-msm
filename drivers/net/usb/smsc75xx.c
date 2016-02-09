@@ -29,6 +29,7 @@
 #include <linux/crc32.h>
 #include <linux/usb/usbnet.h>
 #include <linux/slab.h>
+#include <linux/firmware.h>
 #include "smsc75xx.h"
 
 #define SMSC_CHIPNAME			"smsc75xx"
@@ -60,6 +61,8 @@
 #define SUSPEND_SUSPEND3		(0x08)
 #define SUSPEND_ALLMODES		(SUSPEND_SUSPEND0 | SUSPEND_SUSPEND1 | \
 					 SUSPEND_SUSPEND2 | SUSPEND_SUSPEND3)
+
+#define MAC_ADDR_0 "smsc75xx/ethmacaddr0"
 
 struct smsc75xx_priv {
 	struct usbnet *dev;
@@ -759,8 +762,43 @@ static int smsc75xx_ioctl(struct net_device *netdev, struct ifreq *rq, int cmd)
 	return generic_mii_ioctl(&dev->mii, if_mii(rq), cmd, NULL);
 }
 
+static int smsc75xx_get_hw_mac(struct usbnet *dev)
+{
+        const struct firmware *addr_file = NULL;
+        int status;
+        u8 tmp[18];
+        static const char *files = {MAC_ADDR_0};
+
+        status = request_firmware(&addr_file, files, &dev->udev->dev);
+
+        if(!status){
+                memset(tmp, 0, sizeof(tmp));
+                memcpy(tmp, addr_file->data, sizeof(tmp) - 1);
+                sscanf(tmp, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                       &dev->net->dev_addr[0],
+                       &dev->net->dev_addr[1],
+                       &dev->net->dev_addr[2],
+                       &dev->net->dev_addr[3],
+                       &dev->net->dev_addr[4],
+                       &dev->net->dev_addr[5]);
+
+                release_firmware(addr_file);
+        }
+
+        return 0;
+}
+
 static void smsc75xx_init_mac_address(struct usbnet *dev)
 {
+	smsc75xx_get_hw_mac(dev);
+
+        if (is_valid_ether_addr(dev->net->dev_addr)) {
+                /* firware values are valid so use them */
+                netif_dbg(dev, ifup, dev->net,
+                          "MAC address read from firmware\n");
+                return;
+        }
+
 	/* try reading mac address from EEPROM */
 	if (smsc75xx_read_eeprom(dev, EEPROM_MAC_OFFSET, ETH_ALEN,
 			dev->net->dev_addr) == 0) {
@@ -2278,4 +2316,5 @@ module_usb_driver(smsc75xx_driver);
 MODULE_AUTHOR("Nancy Lin");
 MODULE_AUTHOR("Steve Glendinning <steve.glendinning@shawell.net>");
 MODULE_DESCRIPTION("SMSC75XX USB 2.0 Gigabit Ethernet Devices");
+MODULE_FIRMWARE(MAC_ADDR_0);
 MODULE_LICENSE("GPL");
