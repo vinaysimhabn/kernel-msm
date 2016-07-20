@@ -292,6 +292,11 @@ static int dsi2lvds_read_status(struct dsi2lvds *dsi2lvds)
 static int dsi2lvds_enable(struct drm_panel *panel)
 {
 	struct dsi2lvds *dsi2lvds = to_dsi2lvds_panel(panel);
+	void __iomem *dsi_phy_base = ioremap(0x01a98500, SZ_4K);
+	void __iomem *dsi_base = ioremap(0x01a980c4, SZ_1);
+	void __iomem *dsi_pll_base = ioremap(0x01a98300, 0xd4);
+	void __iomem *dsi_ctrl_base = ioremap(0x01a98000, 0x25c);
+	int i;
 	unsigned int val;
 	int ret;
 	u32 hbpr, hpw, htime1, hfpr, hsize, htime2;
@@ -346,6 +351,7 @@ static int dsi2lvds_enable(struct drm_panel *panel)
 
 	/* RGB666 - BIT8(1'b0), Magic square RGB66 18bit ~RGB888 24-bit */
 	dsi2lvds_write(dsi2lvds, VPCTRL, 0x01500001);
+	printk(KERN_ERR "HTIM1 %08x %08x %08x %08x", htime1, vtime1, htime2, vtime2);
 	dsi2lvds_write(dsi2lvds, HTIM1, htime1);
 	dsi2lvds_write(dsi2lvds, VTIM1, vtime1);
 	dsi2lvds_write(dsi2lvds, HTIM2, htime2);
@@ -369,6 +375,7 @@ static int dsi2lvds_enable(struct drm_panel *panel)
 	dsi2lvds_write(dsi2lvds, VFUEN, 0x00000001);
 	dsi2lvds_write(dsi2lvds, LVCFG, 0x00000031);
 
+	dsi2lvds_write(dsi2lvds, DEBUG00, 0x0000000a);
 #ifdef TC358775XBG_DEBUG
 	pr_debug("dsi2lvsd: I2C ------READ STATUS------------\n");
 	ret = dsi2lvds_read_status(dsi2lvds);
@@ -377,6 +384,33 @@ static int dsi2lvds_enable(struct drm_panel *panel)
 	pr_debug("dsi2lvsd: I2C ------READ STATUS------------\n");
 #endif
 
+	for(i=0 ; i<12 ; i++)
+	printk(KERN_ERR "TIMINGS %08x", readl(dsi_phy_base + 0x140 + (i*4)));
+	iounmap(dsi_phy_base);
+
+	printk(KERN_ERR "CLKOUT_TIMING_CTRL %08x", readl(dsi_base));
+	iounmap(dsi_base);
+
+	for(i=0 ; i< 0xd4 ; i+=4)
+	{
+		printk(KERN_ERR "DSI_PLL - %08x", readl(dsi_pll_base + i));
+		wmb();
+	}
+
+	iounmap(dsi_pll_base);
+
+	printk(KERN_ERR "DSI_CTRL------------\n");
+	for(i=0 ; i< 0x25c ; i+=16)
+	{
+		printk(KERN_ERR "%08x %08x %08x %08x\n",
+				readl(dsi_ctrl_base + i),
+				readl(dsi_ctrl_base + 4 + i),
+				readl(dsi_ctrl_base + 8 + i),
+				readl(dsi_ctrl_base + 12 + i));
+	}
+	printk(KERN_ERR "DSI_CTRL------------\n");
+
+	iounmap(dsi_ctrl_base);
 	dsi2lvds->enabled = true;
 
 	return 0;
