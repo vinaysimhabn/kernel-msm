@@ -8,3 +8,4 @@ obj-$(CONFIG_DRM_PANEL_SHARP_LQ101R1SX01) += panel-sharp-lq101r1sx01.o
 obj-$(CONFIG_DRM_PANEL_SHARP_LS043T1LE01) += panel-sharp-ls043t1le01.o
 obj-$(CONFIG_DRM_PANEL_SHARP_WQXGA) += panel-sharp-dual-dsi.o
 obj-$(CONFIG_DRM_PANEL_INNOLUX_N070ICN) += panel-lemaker-HC070IY35023.o
+obj-$(CONFIG_DRM_PANEL_TRULY480x864) += panel-otm8018b.o
