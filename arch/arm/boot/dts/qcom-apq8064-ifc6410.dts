@@ -473,7 +473,8 @@
 
                         panel@0 {
                                 reg = <0>;
-                                compatible = "truly,otm8018b";
+                                /*compatible = "truly,otm8018b";*/
+                                compatible = "jdi,,acx450akm";
 
                                 avdd-supply = <&pm8921_l8>;
 				iovdd-supply = <&pm8921_s4>;
