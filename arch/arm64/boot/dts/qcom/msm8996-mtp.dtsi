@@ -42,31 +42,22 @@
 				qcom,sync-dual-dsi;
 
 				panel@0 {
-					compatible = "sharp,dual_wqxga";
+
 					reg = <0>;
-					link2 = <&link2>;
+	                                compatible = "truly,otm8018b";
+
+	                                avdd-supply = <&pm8994_l22>;
+        	                        iovdd-supply = <&pm8994_s4>;
 
 					reset-gpios = <&msmgpio 8 0>;
+					bklt-pwm-gpios = <&msmgpio 9 0>;
 
-					display-timings {
-						timing0: timing-0 {
-						clock-frequency = <285405120>;
-						hactive = <1600>;
-						vactive = <2560>;
-						hfront-porch = <152>;
-						hback-porch = <64>;
-						hsync-len = <32>;
-						vfront-porch = <11>;
-						vback-porch = <2>;
-						vsync-len = <1>;
-						};
-					};
+                                	port {
+                                        	panel0_in: endpoint {
+                                                	remote-endpoint = <&dsi0_out>;
+                                        	};
+                                	};
 
-					port {
-						panel0_in: endpoint {
-							remote-endpoint = <&dsi0_out>;
-						};
-					};
 				};
 
 				ports {
@@ -90,8 +81,15 @@
 				qcom,sync-dual-dsi;
 
 				link2: panel@0 {
-					compatible = "sharp,dual_wqxga";
+
 					reg = <0>;
+	                                compatible = "truly,otm8018b";
+
+	                                avdd-supply = <&pm8994_l22>;
+        	                        iovdd-supply = <&pm8994_s4>;
+
+					reset-gpios = <&msmgpio 10 0>;
+					bklt-pwm-gpios = <&msmgpio 11 0>;
 
 					port {
 						panel1_in: endpoint {
@@ -113,6 +111,7 @@
 			dsi-phy@996400 {
 				status = "okay";
 			};
+
 		};
 	};
 };
