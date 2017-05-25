@@ -1914,6 +1914,65 @@
 			clocks = <&mmcc DSI_M_AHB_CLK>;
 		};
 
+		dsi1: mdss_dsi@5800000 {
+			compatible = "qcom,mdss-dsi-ctrl";
+			label = "MDSS DSI CTRL->1";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <GIC_SPI 166 0>;
+			reg = <0x05800000 0x200>;
+			reg-names = "dsi_ctrl";
+
+			clocks = <&mmcc DSI2_M_AHB_CLK>,
+				<&mmcc DSI2_S_AHB_CLK>,
+				<&mmcc AMP_AHB_CLK>,
+				<&mmcc DSI2_CLK>,
+				<&mmcc DSI2_BYTE_CLK>,
+				<&mmcc DSI2_PIXEL_CLK>,
+				<&mmcc DSI2_ESC_CLK>;
+			clock-names = "iface_clk", "bus_clk", "core_mmss_clk",
+					"src_clk", "byte_clk", "pixel_clk",
+					"core_clk";
+
+			assigned-clocks = <&mmcc DSI2_BYTE_SRC>,
+					<&mmcc DSI2_ESC_SRC>,
+					<&mmcc DSI2_SRC>,
+					<&mmcc DSI2_PIXEL_SRC>;
+			assigned-clock-parents = <&dsi1_phy 0>,
+						<&dsi1_phy 0>,
+						<&dsi1_phy 1>,
+						<&dsi1_phy 1>;
+			syscon-sfpb = <&mmss_sfpb>;
+			phys = <&dsi1_phy>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dsi1_in: endpoint {
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dsi1_out: endpoint {
+					};
+				};
+			};
+		};
+
+		dsi1_phy: dsi-phy@5800200 {
+			compatible = "qcom,dsi-phy-28nm-8960";
+			#clock-cells = <1>;
+
+			reg = <0x05800200 0x100>,
+				<0x05800300 0x200>,
+				<0x05800500 0x5c>;
+			reg-names = "dsi_pll", "dsi_phy", "dsi_phy_regulator";
+			clock-names = "iface_clk";
+			clocks = <&mmcc DSI2_M_AHB_CLK>;
+		};
 
 		mdp_port0: iommu@7500000 {
 			compatible = "qcom,apq8064-iommu";

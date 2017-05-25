@@ -52,6 +52,7 @@ static int dsi_get_version(const void __iomem *base, u32 *major, u32 *minor)
 	 */
 
 	ver = msm_readl(base + REG_DSI_VERSION);
+	DBG(" dsi version : %08x", ver);
 	if (ver) {
 		/* older dsi host, there is no register shift */
 		ver = FIELD(ver, DSI_VERSION_MAJOR);

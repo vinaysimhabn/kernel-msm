@@ -53,7 +53,9 @@ static inline struct otm8018b_panel *to_otm8018b_panel(struct drm_panel *panel)
 	return container_of(panel, struct otm8018b_panel, base);
 }
 
-/*************************** IC for AUO 4' MIPI * 480RGBx854************/
+/************************** IC for AUO 4' MIPI * 480RGBx854************/
+static char pixels_on[1]={0x23};/* For testing , all pixel on*/
+
 static char write_memory1[4]={0xFF,0x80,0x09,0x01};//Enable EXTC
 static char write_memory2[2]={0x00,0x80};//Shift address
 static char write_memory3[3]={0xFF,0x80,0x09};	 //Enable Orise mode
@@ -239,6 +241,7 @@ static int otm8018b_panel_init(struct otm8018b_panel *otm8018b)
 	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	
 	/*truly*/
+if(0){
 	ret = mipi_dsi_generic_write(dsi, &write_memory1, sizeof(write_memory1));
 	if (ret < 0)
 		return ret;
@@ -650,7 +653,7 @@ static int otm8018b_panel_init(struct otm8018b_panel *otm8018b)
 	if (ret < 0)
 		return ret;
 	mdelay(250);
-
+}
 	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
 	if (ret < 0)
 		return ret;
@@ -669,7 +672,11 @@ static int otm8018b_panel_on(struct otm8018b_panel *otm8018b)
 	ret = mipi_dsi_dcs_set_display_on(dsi);
 	if (ret < 0)
 		return ret;
-
+if(0){
+	ret = mipi_dsi_dcs_write_buffer(dsi, &pixels_on, sizeof(pixels_on));
+	if (ret < 0)
+		return ret;
+}
 	mdelay(10);
 
 	return 0;

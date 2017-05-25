@@ -455,6 +455,12 @@
                                         };
                                 };
 
+				port@2 {
+                                        mdp_dsi2_out: endpoint {
+                                                remote-endpoint = <&dsi1_in>;
+                                        };
+                                };
+
 				port@3 {
 					endpoint {
 						remote-endpoint = <&hdmi_in>;
@@ -473,8 +479,8 @@
 
                         panel@0 {
                                 reg = <0>;
-                                /*compatible = "truly,otm8018b";*/
-                                compatible = "jdi,,acx450akm";
+                                compatible = "truly,otm8018b";
+                                /*compatible = "jdi,,acx450akm";*/
 
                                 avdd-supply = <&pm8921_l8>;
 				iovdd-supply = <&pm8921_s4>;
@@ -508,6 +514,52 @@
                 dsi-phy@4700200 {
                         status = "okay";
                         vddio-supply = <&pm8921_lvs7>;/*VDD_PLL2_1 to 7*/
+                };
+
+		dsi1: mdss_dsi@5800000 {
+                        status = "okay";
+                        vdda-supply = <&pm8921_l2>;
+                        vdd-supply = <&pm8921_l8>;
+                        vddio-supply = <&pm8921_lvs7>;
+                        avdd-supply = <&pm8921_l11>;
+                        vcss-supply = <&ext_3p3v>;
+
+                        panel@0 {
+                                reg = <0>;
+                                compatible = "truly,otm8018b";
+
+                                avdd-supply = <&pm8921_l8>;
+				iovdd-supply = <&pm8921_s4>;
+
+                                reset-gpios = <&pm8921_gpio 26 GPIO_ACTIVE_HIGH>;
+                                bklt-pwm-gpios = <&tlmm_pinmux 51 GPIO_ACTIVE_HIGH>;
+
+                                port {
+                                        panel2_in: endpoint {
+                                                remote-endpoint = <&dsi1_out>;
+                                        };
+                                };
+                        };
+
+                        ports {
+                                port@0 {
+                                        dsi1_in: endpoint {
+                                                remote-endpoint = <&mdp_dsi2_out>;
+                                        };
+                                };
+
+                                port@1 {
+                                        dsi1_out: endpoint {
+                                                remote-endpoint = <&panel2_in>;
+                                                data-lanes = <0 1 2 3>;
+                                        };
+                                };
+                        };
+                };
+
+                dsi-phy@5800200 {
+                        status = "okay";
+                        vddio-supply = <&pm8921_lvs7>;
                 };
 	};
 };
