@@ -26,6 +26,34 @@
 		};
 	};
 
+	tmp102_sns1_alert: tmp102_sns1_alert {
+		pinmux {
+			function = "gpio";
+			pins = "gpio62";
+		};
+
+		pinconf {
+			pins = "gpio62";
+			drive-strength = <8>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	tmp102_sns2_alert: tmp102_sns2_alert {
+		pinmux {
+			function = "gpio";
+			pins = "gpio69";
+		};
+
+		pinconf {
+			pins = "gpio69";
+			drive-strength = <8>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
 	adv7533_pwr_en: adv7533_pwr_en {
 		pinmux {
 			function = "gpio";

@@ -73,6 +73,36 @@
 			status = "okay";
 		};
 
+		i2c@0 {
+			compatible = "i2c-gpio";
+			gpios = <&msmgpio 29 0 /* sda */
+			         &msmgpio 30 0 /* scl */
+			        >;
+			i2c-gpio,sda-open-drain;
+			i2c-gpio,scl-open-drain;
+			i2c-gpio,delay-us = <2>;        /* ~100 kHz */
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			temp_sensor_u26: tmp@48 {
+				status = "okay";
+				reg = <0x48>;
+
+				compatible = "ti,tmp102";
+				pinctrl-names = "default";
+				pinctrl-0 = <&tmp102_sns1_alert>;
+			};
+
+			temp_sensor_u49: tmp@49 {
+				status = "okay";
+				reg = <0x49>;
+
+				compatible = "ti,tmp102";
+				pinctrl-names = "default";
+				pinctrl-0 = <&tmp102_sns2_alert>;
+			};
+		};
+
 		i2c@78b8000 {
 		/* On High speed expansion */
 			label = "HS-I2C2";
@@ -371,7 +401,7 @@
 		};
 
 		cci@1b0c000 {
-			status = "ok";
+			status = "disabled";
 
 			camera_rear@3b {
 				compatible = "ovti,ov5645";
