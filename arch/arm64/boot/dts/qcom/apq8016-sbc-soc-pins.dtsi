@@ -26,6 +26,19 @@
 		};
 	};
 
+	adv7533_pwr_en: adv7533_pwr_en {
+		pinmux {
+			function = "gpio";
+			pins = "gpio60";
+		};
+		pinconf {
+			pins = "gpio60";
+			drive-strength = <16>;
+			output-high;
+			bias-disable;
+		};
+	};
+
 	adv7533_int_active: adv533_int_active {
 		pinmux {
 			function = "gpio";
