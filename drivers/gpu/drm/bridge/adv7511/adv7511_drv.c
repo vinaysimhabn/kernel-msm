@@ -489,6 +489,37 @@ static irqreturn_t adv7511_irq_handler(int irq, void *devid)
 	return ret < 0 ? IRQ_NONE : IRQ_HANDLED;
 }
 
+static irqreturn_t adv7511_alert_irq_handler(int irq, void *devid)
+{
+	struct adv7511 *adv7511 = devid;
+	struct file *f;
+	char buf[128];
+	mm_segment_t fs;
+	int i;
+	// Init the buffer with 0
+	for(i=0;i<128;i++)
+		buf[i] = 0;
+
+	//read tmp102 registers
+	/* Do a read to clear the interrupt */
+	f = filp_open("/sys/class/hwmon/hwmon1/temp1_input", O_RDONLY, 0);
+	if(f == NULL)
+		printk(KERN_ALERT "filp_open error!!.\n");
+	else{
+		fs = get_fs();
+		set_fs(get_ds());
+		f->f_op->read(f, buf, 128, &f->f_pos);
+		set_fs(fs);
+
+		printk(KERN_INFO "** %s buf:%s\n", __func__, buf);
+	}
+	filp_close(f,NULL);
+
+	adv7511->alert_status = connector_status_connected;
+
+	return IRQ_HANDLED;
+}
+
 /* -----------------------------------------------------------------------------
  * EDID retrieval
  */
@@ -665,7 +696,13 @@ adv7511_detect(struct adv7511 *adv7511, struct drm_connector *connector)
 				   ADV7511_REG_POWER2_HPD_SRC_BOTH);
 	}
 
+	if (adv7511->alert_status != connector_status_connected)
+		status = connector_status_connected;
+	else
+		status = connector_status_disconnected;
+
 	adv7511->status = status;
+
 	return status;
 }
 
@@ -1049,6 +1086,7 @@ static int adv7511_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	adv7511->i2c_main = i2c;
 	adv7511->powered = false;
 	adv7511->status = connector_status_disconnected;
+	adv7511->alert_status = connector_status_disconnected;
 
 	if (dev->of_node)
 		adv7511->type = (enum adv7511_type)of_device_get_match_data(dev);
@@ -1077,6 +1115,22 @@ static int adv7511_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	adv7511->gpio_pd = devm_gpiod_get_optional(dev, "pd", GPIOD_OUT_HIGH);
 	if (IS_ERR(adv7511->gpio_pd)) {
 		ret = PTR_ERR(adv7511->gpio_pd);
+		goto uninit_regulators;
+	}
+
+	adv7511->gpio_alert = devm_gpiod_get_optional(dev, "alert", GPIOD_IN);
+	if (IS_ERR(adv7511->gpio_alert)) {
+		ret = PTR_ERR(adv7511->gpio_alert);
+		goto uninit_regulators;
+	}
+
+	adv7511->alert_irq = gpiod_to_irq(adv7511->gpio_alert);
+	ret = devm_request_threaded_irq(dev, adv7511->alert_irq, NULL,
+				    adv7511_alert_irq_handler,
+				    IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				    "tmp102_alert",
+				    adv7511);
+	if (ret) {
 		goto uninit_regulators;
 	}
 

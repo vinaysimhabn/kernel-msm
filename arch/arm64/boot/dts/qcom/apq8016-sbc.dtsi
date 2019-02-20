@@ -122,6 +122,7 @@
 				clock-names = "cec";
 
 				pd-gpios = <&msmgpio 32 0>;
+				alert-gpios = <&msmgpio 69 GPIO_ACTIVE_LOW>;
 
 				avdd-supply = <&pm8916_l4>;
 				v1p2-supply = <&pm8916_l4>;

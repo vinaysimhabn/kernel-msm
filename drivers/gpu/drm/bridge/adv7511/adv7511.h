@@ -305,6 +305,7 @@ struct adv7511 {
 	struct regmap *regmap;
 	struct regmap *regmap_cec;
 	enum drm_connector_status status;
+	enum drm_connector_status alert_status;
 	bool powered;
 
 	struct drm_display_mode curr_mode;
@@ -331,6 +332,8 @@ struct adv7511 {
 	struct edid *edid;
 
 	struct gpio_desc *gpio_pd;
+	struct gpio_desc *gpio_alert;
+	int alert_irq;
 
 	struct regulator_bulk_data *supplies;
 	unsigned int num_supplies;
