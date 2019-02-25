@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/slab.h>
+#include <linux/thermal.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
@@ -636,6 +637,8 @@ adv7511_detect(struct adv7511 *adv7511, struct drm_connector *connector)
 	unsigned int val;
 	bool hpd;
 	int ret;
+	struct thermal_zone_device *tz;
+	int temperature, hysteresis, trip_temp;
 
 	ret = regmap_read(adv7511->regmap, ADV7511_REG_STATUS, &val);
 	if (ret < 0)
@@ -665,7 +668,36 @@ adv7511_detect(struct adv7511 *adv7511, struct drm_connector *connector)
 				   ADV7511_REG_POWER2_HPD_SRC_BOTH);
 	}
 
+	tz = thermal_zone_get_zone_by_name("hdmi-thermal");
+	if (IS_ERR(tz)) {
+		dev_err(&adv7511->i2c_main->dev, "Unable to get thermal zone for tmp102\n");
+		return PTR_ERR(tz);
+	}
+
+	ret = thermal_zone_get_temp(tz, &temperature);
+	if (ret)
+		return ret;
+
+	ret = tz->ops->get_trip_temp(tz, 0, &trip_temp);
+	if (ret)
+		return ret;
+
+	ret = tz->ops->get_trip_hyst(tz, 0, &hysteresis);
+	if (ret)
+		return ret;
+
+        if( temperature < hysteresis || temperature > trip_temp) {
+                status = connector_status_connected;
+                gpiod_set_value_cansleep(adv7511->gpio_heater, 0);
+        } else {
+                status = connector_status_disconnected;
+                gpiod_set_value_cansleep(adv7511->gpio_heater, 1);
+        }
+
 	adv7511->status = status;
+	printk(KERN_ERR "**%s : thermal: temp %d hyst %d trip %d**\n", __func__,
+		temperature, hysteresis, trip_temp);
+
 	return status;
 }
 
@@ -860,7 +892,9 @@ static int adv7511_bridge_attach(struct drm_bridge *bridge)
 		return -ENODEV;
 	}
 
-	adv->connector.polled = DRM_CONNECTOR_POLL_HPD;
+//	adv->connector.polled = DRM_CONNECTOR_POLL_HPD;
+	adv->connector.polled = DRM_CONNECTOR_POLL_CONNECT |
+                                DRM_CONNECTOR_POLL_DISCONNECT;
 
 	ret = drm_connector_init(bridge->dev, &adv->connector,
 				 &adv7511_connector_funcs,
@@ -1083,6 +1117,17 @@ static int adv7511_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	if (adv7511->gpio_pd) {
 		mdelay(5);
 		gpiod_set_value_cansleep(adv7511->gpio_pd, 0);
+	}
+
+	adv7511->gpio_heater = devm_gpiod_get_optional(dev, "heater", GPIOD_OUT_HIGH);
+	if (IS_ERR(adv7511->gpio_heater)) {
+		ret = PTR_ERR(adv7511->gpio_heater);
+		goto uninit_regulators;
+        }
+
+	if (adv7511->gpio_heater) {
+		mdelay(5);
+		gpiod_set_value_cansleep(adv7511->gpio_heater, 0);
 	}
 
 	adv7511->regmap = devm_regmap_init_i2c(i2c, &adv7511_regmap_config);

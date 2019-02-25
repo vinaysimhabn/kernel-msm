@@ -331,6 +331,7 @@ struct adv7511 {
 	struct edid *edid;
 
 	struct gpio_desc *gpio_pd;
+	struct gpio_desc *gpio_heater;
 
 	struct regulator_bulk_data *supplies;
 	unsigned int num_supplies;

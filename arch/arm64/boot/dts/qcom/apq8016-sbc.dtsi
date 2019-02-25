@@ -96,6 +96,7 @@
 			temp_sensor_u49: tmp@49 {
 				status = "okay";
 				reg = <0x49>;
+				#thermal-sensor-cells = <0>;
 
 				compatible = "ti,tmp102";
 				pinctrl-names = "default";
@@ -122,6 +123,7 @@
 				clock-names = "cec";
 
 				pd-gpios = <&msmgpio 32 0>;
+				heater-gpios = <&msmgpio 61 0>;
 
 				avdd-supply = <&pm8916_l4>;
 				v1p2-supply = <&pm8916_l4>;
@@ -524,6 +526,28 @@
 			label = "Volume Up";
 			linux,code = <KEY_VOLUMEUP>;
 			gpios = <&msmgpio 107 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&thermal_zones {
+	hdmi-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <1000>;
+
+		thermal-sensors = <&temp_sensor_u49 0>;
+
+		trips {
+			hdmi_alert: trip0 {
+				temperature = <50000>;
+				hysteresis = <30000>;
+				type = "passive";
+			};
+			hdmi_crit: trip1 {
+				temperature = <65000>;
+				hysteresis = <20000>;
+				type = "critical";
+			};
 		};
 	};
 };

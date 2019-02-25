@@ -217,7 +217,7 @@
 		interrupts = <GIC_PPI 7 GIC_CPU_MASK_SIMPLE(4)>;
 	};
 
-	thermal-zones {
+	thermal_zones: thermal-zones {
 		cpu-thermal0 {
 			polling-delay-passive = <250>;
 			polling-delay = <1000>;
