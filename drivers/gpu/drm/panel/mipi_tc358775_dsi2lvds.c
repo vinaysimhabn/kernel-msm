@@ -93,6 +93,31 @@ static const struct drm_display_mode auo_b101xtn01_mode = {
 	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
 };
 
+static const struct drm_display_mode ed_mode = {
+	/*
+	.clock = 47646720,
+        .hdisplay = 1024,
+	.hsync_start = 1024 + 20,
+        .hsync_end = 1024 + 20 + 4,
+        .htotal = 1024 + 20 + 4 + 80,
+        .vdisplay = 600,
+        .vsync_start = 600 + 10,
+        .vsync_end = 600 + 10 + 4,
+        .vtotal = 600 + 10 + 4 + 90,
+        .vrefresh = 60,
+	*/
+ .clock = 29760,
+        .hdisplay = 800,
+        .hsync_start = 800 + 24,
+        .hsync_end = 800 + 24 + 72,
+        .htotal = 800 + 24 + 72 + 96,
+        .vdisplay = 400,
+        .vsync_start = 400 + 3,
+        .vsync_end = 400 + 3 + 10,
+        .vtotal = 400 + 3 + 10 + 7,
+        .vrefresh = 60,
+};
+
 static const struct drm_display_mode det050fwnmcmis_1a_mode = {
 	.clock = 41700,
 	.hdisplay = 480,
@@ -303,17 +328,17 @@ static int dsi2lvds_enable(struct drm_panel *panel)
 	u32 vbpr, vpw, vtime1, vfpr, vsize, vtime2;
 
 	hbpr = 0;
-	hpw  = det050fwnmcmis_1a_mode.hsync_end - det050fwnmcmis_1a_mode.hsync_start;
+	hpw  = ed_mode.hsync_end - ed_mode.hsync_start;
 	vbpr = 0;
-	vpw  = det050fwnmcmis_1a_mode.vsync_end - det050fwnmcmis_1a_mode.vsync_start;
+	vpw  = ed_mode.vsync_end - ed_mode.vsync_start;
 
 	htime1 = (hbpr << 16) + hpw;
 	vtime1 = (vbpr << 16) + vpw;
 
-	hfpr = det050fwnmcmis_1a_mode.hsync_start - det050fwnmcmis_1a_mode.hdisplay;
-	hsize = det050fwnmcmis_1a_mode.hdisplay;
-	vfpr = det050fwnmcmis_1a_mode.vsync_start - det050fwnmcmis_1a_mode.vdisplay;
-	vsize = det050fwnmcmis_1a_mode.vdisplay;
+	hfpr = ed_mode.hsync_start - ed_mode.hdisplay;
+	hsize = ed_mode.hdisplay;
+	vfpr = ed_mode.vsync_start - ed_mode.vdisplay;
+	vsize = ed_mode.vdisplay;
 
 	htime2 = (hfpr << 16) + hsize;
 	vtime2 = (vfpr << 16) + vsize;
@@ -350,7 +375,7 @@ static int dsi2lvds_enable(struct drm_panel *panel)
 	dsi2lvds_write(dsi2lvds, DSI_STARTDSI, 0x00000001);
 
 	/* RGB666 - BIT8(1'b0), Magic square RGB66 18bit ~RGB888 24-bit */
-	dsi2lvds_write(dsi2lvds, VPCTRL, 0x01500001);
+	dsi2lvds_write(dsi2lvds, VPCTRL, 0x01500000);
 	printk(KERN_ERR "HTIM1 %08x %08x %08x %08x", htime1, vtime1, htime2, vtime2);
 	dsi2lvds_write(dsi2lvds, HTIM1, htime1);
 	dsi2lvds_write(dsi2lvds, VTIM1, vtime1);
@@ -438,11 +463,11 @@ static int dsi2lvds_get_modes(struct drm_panel *panel)
 #else
 	struct drm_display_mode *mode;
 
-	mode = drm_mode_duplicate(panel->drm, &det050fwnmcmis_1a_mode);
+	mode = drm_mode_duplicate(panel->drm, &ed_mode);
 	if (!mode) {
 		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
-		det050fwnmcmis_1a_mode.hdisplay, det050fwnmcmis_1a_mode.vdisplay,
-			det050fwnmcmis_1a_mode.vrefresh);
+		ed_mode.hdisplay, ed_mode.vdisplay,
+			ed_mode.vrefresh);
 		return -ENOMEM;
 	}
 
@@ -480,7 +505,7 @@ static int dsi2lvds_add(struct dsi2lvds *dsi2lvds)
 #endif
 
 #ifndef LVDS_EDID_PANEL
-	dsi2lvds->mode = &det050fwnmcmis_1a_mode;
+	dsi2lvds->mode = &ed_mode;
 #endif
 	dsi2lvds->dsi_sw_select_gpio = devm_gpiod_get(dev,
 				"dsi-sw-select", GPIOD_OUT_LOW);
