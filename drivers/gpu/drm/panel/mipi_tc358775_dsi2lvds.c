@@ -111,17 +111,6 @@ static const struct drm_display_mode det050fwnmcmis_1a_mode = {
 static const struct drm_display_mode ed_mode = {
 	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
 	/*
-	.clock = 47646720,
-        .hdisplay = 1024,
-	.hsync_start = 1024 + 20,
-        .hsync_end = 1024 + 20 + 4,
-        .htotal = 1024 + 20 + 4 + 80,
-        .vdisplay = 600,
-        .vsync_start = 600 + 10,
-        .vsync_end = 600 + 10 + 4,
-        .vtotal = 600 + 10 + 4 + 90,
-        .vrefresh = 60,
-	*/
 	 .clock = 29760,
         .hdisplay = 800,
         .hsync_start = 800 + 24,
@@ -132,8 +121,7 @@ static const struct drm_display_mode ed_mode = {
         .vsync_end = 400 + 3 + 10,
         .vtotal = 400 + 3 + 10 + 7,
         .vrefresh = 60,
-	/*
-	.clock = 25564320,
+	.clock = 25564,
 	.hdisplay = 800,
 	.hsync_start = 800 + 32,
 	.hsync_end = 800 + 32 + 2,
@@ -144,6 +132,16 @@ static const struct drm_display_mode ed_mode = {
 	.vtotal = 480 + 5 + 2 + 5,
 	.vrefresh = 60,
 	*/
+	.clock = 38390,
+        .hdisplay = 800,
+        .hsync_start = 800 + 142,
+        .hsync_end = 800 + 142 + 40,
+        .htotal = 800 + 142 + 40 + 32,
+        .vdisplay = 480,
+        .vsync_start = 480 + 126,
+        .vsync_end = 480 + 126 + 20,
+        .vtotal = 480 + 126 + 20 + 5,
+        .vrefresh = 60,
 };
 
 #endif
