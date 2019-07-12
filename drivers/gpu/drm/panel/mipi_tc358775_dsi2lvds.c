@@ -16,6 +16,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 #define DEBUG
+#define TC358775XBG_DEBUG
 #include <linux/backlight.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
@@ -110,28 +111,6 @@ static const struct drm_display_mode det050fwnmcmis_1a_mode = {
 
 static const struct drm_display_mode ed_mode = {
 	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
-	/*
-	 .clock = 29760,
-        .hdisplay = 800,
-        .hsync_start = 800 + 24,
-        .hsync_end = 800 + 24 + 72,
-        .htotal = 800 + 24 + 72 + 96,
-        .vdisplay = 400,
-        .vsync_start = 400 + 3,
-        .vsync_end = 400 + 3 + 10,
-        .vtotal = 400 + 3 + 10 + 7,
-        .vrefresh = 60,
-	.clock = 25564,
-	.hdisplay = 800,
-	.hsync_start = 800 + 32,
-	.hsync_end = 800 + 32 + 2,
-	.htotal = 800 + 32 + 2 + 32,
-	.vdisplay = 480,
-	.vsync_start = 480 + 5,
-	.vsync_end = 480 + 5 + 2,
-	.vtotal = 480 + 5 + 2 + 5,
-	.vrefresh = 60,
-	*/
 	.clock = 38390,
         .hdisplay = 800,
         .hsync_start = 800 + 142,
@@ -281,8 +260,10 @@ static u32 dsi2lvds_read(struct dsi2lvds *dsi2lvds, u16 reg)
 	if (ret)
 		return ret;
 
+	//pr_debug("dsi2lvds: I2C : reg:%04x value:%08x\n",
+	//			reg, SWAP_UINT32(data));
 	pr_debug("dsi2lvds: I2C : reg:%04x value:%08x\n",
-				reg, SWAP_UINT32(data));
+				reg, data);
 
 	return data;
 }
