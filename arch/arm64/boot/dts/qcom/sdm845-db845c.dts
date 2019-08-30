@@ -262,6 +262,12 @@
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 
+		 vreg_l14a_1p8: ldo14 {
+                        regulator-min-microvolt = <1800000>;
+                        regulator-max-microvolt = <1800000>;
+                        regulator-initial-mode = <RPMH_REGULATOR_MODE_LPM>;
+                };
+
 		vreg_l7a_1p8: ldo7 {
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
@@ -340,10 +346,32 @@
 	qcom,master-dsi;
 #endif
 
+	panel@0 {
+                reg = <0>;
+                compatible = "auo,at-t070d61-39ta-b1";
+
+                vcc-supply = <&vreg_l14a_1p8>;
+
+		reset-gpios = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+		bklt-pwm-gpios = <&tlmm 88 GPIO_ACTIVE_HIGH>;
+
+                port {
+                        panel_in: endpoint {
+                                remote-endpoint = <&dsi0_out>;
+                        };
+                };
+        };
+
 	ports {
+                port@0 {
+                        dsi0_in: endpoint {
+                                remote-endpoint = <&dpu_intf1_out>;
+                        };
+                };
+
 		port@1 {
 			endpoint {
-				remote-endpoint = <&lt9611_a>;
+				remote-endpoint = <&panel_in>;
 				data-lanes = <0 1 2 3>;
 			};
 		};
