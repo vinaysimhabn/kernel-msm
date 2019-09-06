@@ -1,0 +1,45 @@
+AUO model AT-T070D61-39TA-B1 800x1280 7" DSI Panel
+
+Required properties:
+- compatible: should be "auo,at-t070d61-39ta-b1"
+- vcc-supply: phandle of the regulator that provides the supply voltage
+  VCC power supply (3.3V)
+- reset-gpios: phandle of gpio for reset line
+  RESET, HIGH active
+- bklt-pwm-gpios: phandle of the gpio for power ic line
+  Power IC supply enable, High active
+
+Example:
+
+	dsi0: qcom,mdss_dsi@4700000 {
+		panel@0 {
+			reg = <0>;
+			compatible = "auo,at-t070d61-39ta-b1";
+
+			vcc-supply = <&pm8921_l8>;
+
+			reset-gpios = <&pm8821_mpps 2 GPIO_ACTIVE_HIGH>;
+			bklt-pwm-gpios = <&tlmm_pinmux 80 GPIO_ACTIVE_HIGH>;
+
+			port {
+				panel_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+		};
+
+		ports {
+			port@0 {
+				dsi0_in: endpoint {
+					remote-endpoint = <&mdp_dsi1_out>;
+				};
+			};
+
+			port@1 {
+				dsi0_out: endpoint {
+					remote-endpoint = <&panel_in>;
+					data-lanes = <0 1 2 3>;
+				};
+			};
+		};
+	};
