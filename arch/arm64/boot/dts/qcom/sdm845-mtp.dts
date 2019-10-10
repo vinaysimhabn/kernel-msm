@@ -402,7 +402,18 @@
 			   <GCC_LPASS_SWAY_CLK>;
 };
 
+&i2c5 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
 &i2c10 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
+&i2c11 {
+	label = "LS-I2C1";
 	status = "okay";
 	clock-frequency = <400000>;
 };
@@ -412,6 +423,10 @@
 };
 
 &mdss_mdp {
+	status = "okay";
+};
+
+&qupv3_id_0 {
 	status = "okay";
 };
 
