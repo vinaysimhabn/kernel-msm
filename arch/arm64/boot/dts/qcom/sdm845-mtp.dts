@@ -8,8 +8,12 @@
 /dts-v1/;
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include "sdm845.dtsi"
+#include "pm8998.dtsi"
+#include "pmi8998.dtsi"
+
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM845 MTP";
@@ -42,14 +46,15 @@
 		regulator-max-microvolt = <1800000>;
 
 		regulator-always-on;
-		regulator-boot-on;
+//		regulator-boot-on;
 
-		vin-supply = <&vph_pwr>;
+//		vin-supply = <&vph_pwr>;
 	};
 };
 
 &adsp_pas {
 	status = "okay";
+	firmware-name = "qcom/sdm845/adsp.mdt";
 };
 
 &apps_rsc {
@@ -350,6 +355,7 @@
 
 &cdsp_pas {
 	status = "okay";
+	firmware-name = "qcom/sdm845/cdsp.mdt";
 };
 
 &dsi0 {
@@ -472,7 +478,8 @@
 
 &usb_1_dwc3 {
 	/* Until we have Type C hooked up we'll force this as host. */
-	dr_mode = "host";
+	dr_mode = "peripheral";
+	//dr_mode = "host";
 };
 
 &usb_1_hsphy {
@@ -506,7 +513,7 @@
 	 * hub that works without vbus) the only sensible thing is to force
 	 * peripheral mode.
 	 */
-	dr_mode = "peripheral";
+	dr_mode = "host";
 };
 
 &usb_2_hsphy {
