@@ -424,6 +424,12 @@
 	clock-frequency = <400000>;
 };
 
+&i2c15 {
+	label = "LS-I2C15";
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
 &mdss {
 	status = "okay";
 };
