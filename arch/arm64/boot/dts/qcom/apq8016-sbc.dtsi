@@ -46,6 +46,30 @@
 		};
 	};
 
+	fakeRegulator1: regulator-fixed@1 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "fakeRegulator1";
+		regulator-type = "voltage";
+		startup-delay-us = <0>;
+		gpio = <&pm8916_gpios 1 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	fakeRegulator2: regulator-fixed@2 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "fakeRegulator2";
+		regulator-type = "voltage";
+		startup-delay-us = <0>;
+		gpios = <&pm8916_gpios 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
 	soc {
 		dma@7884000 {
 			status = "okay";
@@ -162,7 +186,7 @@
 				linux,default-trigger = "mmc0";
 				default-state = "off";
 			};
-
+/*
 			led@3 {
 				label = "apq8016-sbc:green:user3";
 				gpios = <&pm8916_gpios 1 GPIO_ACTIVE_HIGH>;
@@ -177,7 +201,7 @@
 				panic-indicator;
 				default-state = "off";
 			};
-
+*/
 			led@5 {
 				label = "apq8016-sbc:yellow:wlan";
 				gpios = <&pm8916_mpps 2 GPIO_ACTIVE_HIGH>;
@@ -251,15 +275,25 @@
 				vdda-supply = <&pm8916_l2>;
 				vddio-supply = <&pm8916_l6>;
 
-				ports {
-					port@1 {
-						endpoint {
-							remote-endpoint = <&adv7533_in>;
-							data-lanes = <0 1 2 3>;
-						};
-					};
-				};
-			};
+        			panel@0 {
+			            reg = <0>;
+			            compatible = "jdi,lt070me05000";
+
+			            vddp-supply = <&fakeRegulator1>;
+			            iovcc-supply = <&fakeRegulator2>;
+
+			            enable-gpios = <&msmgpio 12 GPIO_ACTIVE_HIGH>;
+			            reset-gpios = <&msmgpio 13 GPIO_ACTIVE_LOW>;
+			            dcdc-en-gpios = <&msmgpio 69 GPIO_ACTIVE_HIGH>;
+
+			            port {
+			                panel_in: endpoint {
+			                    remote-endpoint = <&dsi0_out>;
+				        };
+			            };
+			        };
+
+	                };
 
 			dsi-phy@1a98300 {
 				status = "okay";
