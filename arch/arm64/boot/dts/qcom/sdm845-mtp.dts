@@ -573,7 +573,7 @@
 };
 
 &tlmm {
-	gpio-reserved-ranges = <0 4>, <81 4>;
+//	gpio-reserved-ranges = <0 4>, <81 4>;
 
 	sdc2_clk: sdc2-clk {
 		pinconf {
