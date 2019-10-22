@@ -12,7 +12,7 @@
  * Development of this driver has been sponsored by Glyn:
  *    http://www.glyn.com/Products/Displays
  */
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/ratelimit.h>
 #include <linux/irq.h>
@@ -1137,10 +1137,11 @@ static int edt_ft5x06_ts_probe(struct i2c_client *client,
 				     0, tsdata->num_y * 64 - 1, 0, 0);
 	} else {
 		/* Unknown maximum values. Specify via devicetree */
+	dev_dbg(&client->dev, "***** x,y set");
 		input_set_abs_params(input, ABS_MT_POSITION_X,
-				     0, 65535, 0, 0);
+				     0, 800, 0, 0);
 		input_set_abs_params(input, ABS_MT_POSITION_Y,
-				     0, 65535, 0, 0);
+				     0, 1280, 0, 0);
 	}
 
 	touchscreen_parse_properties(input, true, &tsdata->prop);

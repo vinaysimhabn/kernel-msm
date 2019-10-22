@@ -411,6 +411,42 @@
 &i2c5 {
 	status = "okay";
 	clock-frequency = <400000>;
+
+	polytouch: edt-ft5x06@38 {
+//                compatible = "edt,edt-ft5506";
+		compatible = "focaltech,5x06";
+                reg = <0x38>;
+
+                interrupt-parent = <&tlmm>;
+                interrupts = <125 0x2008>;
+                //interrupts = <125 IRQ_TYPE_EDGE_FALLING>;
+
+                //reset-gpios = <&tlmm 2 GPIO_ACTIVE_LOW>;
+                //wake-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+               focaltech,name = "ft5x06";
+               focaltech,family-id = <0x06>;
+               focaltech,irq-gpio = <&tlmm 125 0x2008>;
+               focaltech,reset-gpio = <&tlmm 2 0x00>;
+               focaltech,group-id = <1>;
+               focaltech,num-max-touches = <10>;
+               focaltech,fw-delay-aa-ms = <100>;
+               focaltech,fw-delay-55-ms = <30>;
+               focaltech,fw-upgrade-id1 = <0x79>;
+               focaltech,fw-upgrade-id2 = <0x08>;
+               focaltech,fw-delay-readid-ms = <10>;
+               focaltech,fw-delay-era-flsh-ms = <2000>;
+               focaltech,ignore-id-check;
+               focaltech,display-coords = <0 0 990 1285>;
+               focaltech,panel-coords = <0 0 800 1280>;
+               focaltech,hard-reset-delay-ms = <20>;
+               focaltech,soft-reset-delay-ms = <150>;
+               focaltech,no-force-update;
+               focaltech,y-flip;
+               focaltech,gesture-support;
+               focaltech,fw-auto-cal;
+               focaltech,i2c-pull-up;
+        };
+
 };
 
 &i2c10 {
