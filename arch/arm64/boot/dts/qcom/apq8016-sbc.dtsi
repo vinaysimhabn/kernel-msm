@@ -103,7 +103,8 @@
 			status = "okay";
 
 			adv_bridge: bridge@39 {
-				status = "okay";
+				status = "disabled";
+				//status = "okay";
 
 				compatible = "adi,adv7533";
 				reg = <0x39>;
@@ -287,18 +288,25 @@
 			            dcdc-en-gpios = <&msmgpio 69 GPIO_ACTIVE_HIGH>;
 
 			            port {
-			                panel_in: endpoint {
-			                    remote-endpoint = <&dsi0_out>;
-				        };
-			            };
-			        };
+					panel_in: endpoint {
+						remote-endpoint = <&dsi0_out>;
+					};
+				};
+		        	};
 
+				ports {
+	                		port@1 {
+        	                		endpoint {
+                	                		remote-endpoint = <&panel_in>;
+	                	                	data-lanes = <0 1 2 3>;
+		        	                };
+        		        	};
+        			};
 	                };
 
 			dsi-phy@1a98300 {
 				status = "okay";
-
-				vddio-supply = <&pm8916_l6>;
+			//	vddio-supply = <&pm8916_l6>;
 			};
 		};
 
