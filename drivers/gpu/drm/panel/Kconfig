@@ -273,4 +273,16 @@ config DRM_PANEL_TRULY_NT35597_WQXGA
 	help
 	  Say Y here if you want to enable support for Truly NT35597 WQXGA Dual DSI
 	  Video Mode panel
+
+config DRM_PANEL_AUO_ATT070D6139TAB1
+        tristate "AUO 800x1280 AT-T070D61-39TA-B1 DSI video mode panel"
+        depends on OF
+        depends on DRM_MIPI_DSI
+        depends on BACKLIGHT_CLASS_DEVICE
+        help
+          Say Y here if you want to enable support for AUO DSI video mode
+          panel devices.
+          The panel has a 800(RGB)×1280 resolution and uses
+          24 bit per pixel.
+
 endmenu
