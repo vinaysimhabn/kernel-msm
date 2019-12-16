@@ -169,6 +169,7 @@
 			swm: swm@c85 {
 				left_spkr:wsa8810-left{
             				compatible = "sdw10217201000";
+					status = "disabled";
 					reg = <0 1>;
 					powerdown-gpios = <&wcdpinctrl 2 0>;
 					#thermal-sensor-cells = <0>;
@@ -178,6 +179,7 @@
 
 				right_spkr:wsa8810-right{
             				compatible = "sdw10217201000";
+					status = "disabled";
 					powerdown-gpios = <&wcdpinctrl 2 0>;
 					reg = <0 2>;
 					#thermal-sensor-cells = <0>;
@@ -412,9 +414,9 @@
 		"DMIC0", "MIC BIAS1",
 		"DMIC1", "MIC BIAS1",
 		"DMIC2", "MIC BIAS3",
-		"DMIC3", "MIC BIAS3",
-		"SpkrLeft IN", "SPK1 OUT",
-		"SpkrRight IN", "SPK2 OUT";
+		"DMIC3", "MIC BIAS3";
+/*		"SpkrLeft IN", "SPK1 OUT",
+		"SpkrRight IN", "SPK2 OUT";*/
 
 	mm1-dai-link {
 		link-name = "MultiMedia1";
@@ -448,7 +450,7 @@
 		};
 
 		codec {
-			sound-dai =  <&left_spkr>, <&right_spkr>, <&swm 0>, <&wcd9340 0>;
+			sound-dai = <&wcd9340 0>;
 		};
 	};
 
@@ -469,7 +471,8 @@
 };
 
 &i2c10 {
-	status = "okay";
+	//status = "okay";
+	status = "disabled";
 	clock-frequency = <400000>;
 };
 
@@ -482,7 +485,8 @@
 &i2c14 {
 	/* On Low speed expansion */
 	label = "LS-I2C0";
-	status = "okay";
+	status = "disabled";
+	//status = "okay";
 };
 
 &spi2 {
@@ -500,7 +504,8 @@
 };
 
 &pcie0 {
-	status = "okay";
+	status = "disabled";
+	//status = "okay";
 	perst-gpio = <&tlmm 35 GPIO_ACTIVE_LOW>;
 	enable-gpio = <&tlmm 134 GPIO_ACTIVE_HIGH>;
 
@@ -513,7 +518,8 @@
 };
 
 &pcie0_phy {
-	status = "okay";
+	status = "disabled";
+	//status = "okay";
 
 	vdda-phy-supply = <&vreg_l1a_0p875>;
 	vdda-pll-supply = <&vreg_l26a_1p2>;
