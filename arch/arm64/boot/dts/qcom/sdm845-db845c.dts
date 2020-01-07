@@ -45,18 +45,6 @@
 		// enable-active-high;
 	};
 
-	pcie0_3p3v_dual: vldo-3v3-regulator {
-		compatible = "regulator-fixed";
-		regulator-name = "VLDO_3V3";
-
-		vin-supply = <&vbat>;
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-
-		gpio = <&tlmm 90 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
-
 	gpio_keys {
 		compatible = "gpio-keys";
 		#address-cells = <1>;
@@ -75,13 +63,6 @@
 
 	leds {
 		compatible = "gpio-leds";
-
-		user4 {
-			label = "db845c:green:user4";
-			gpios = <&pm8998_gpio 13 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			default-state = "off";
-		};
 
 		wlan {
 			label = "db845c:yellow:wlan";
@@ -503,28 +484,6 @@
 	status = "okay";
 };
 
-&pcie0 {
-	status = "disabled";
-	//status = "okay";
-	perst-gpio = <&tlmm 35 GPIO_ACTIVE_LOW>;
-	enable-gpio = <&tlmm 134 GPIO_ACTIVE_HIGH>;
-
-	vddpe-3v3-supply = <&pcie0_3p3v_dual>;
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&pcie0_perst_state>, <&pcie0_clkreq_state>, <&pcie0_wake_state>;
-
-	vddpe-3v3-supply = <&pcie0_3p3v_dual>;
-};
-
-&pcie0_phy {
-	status = "disabled";
-	//status = "okay";
-
-	vdda-phy-supply = <&vreg_l1a_0p875>;
-	vdda-pll-supply = <&vreg_l26a_1p2>;
-};
-
 &mss_pil {
 	status = "okay";
 	firmware-name = "qcom/sdm845/mba.mbn", "qcom/sdm845/modem.mbn";
@@ -577,37 +536,6 @@
 };
 
 &tlmm {
-	pcie0_pwren_state: pcie0-pwren {
-		pins = "gpio90";
-		function = "gpio";
-
-		drive-strength = <2>;
-		bias-disable;
-	};
-
-	pcie0_perst_state: pcie0-reset {
-		pins = "gpio35";
-		function = "gpio";
-
-		drive-strength = <2>;
-		output-low;
-		bias-pull-down;
-	};
-
-	pcie0_clkreq_state: pcie0-clkreq {
-		pins = "gpio36";
-		function = "pci_e0";
-		bias-pull-up;
-	};
-
-	pcie0_wake_state: pcie0-wake {
-		pins = "gpio37";
-		function = "gpio";
-
-		drive-strength = <2>;
-		bias-pull-up;
-	};
-
 	sdc2_clk: sdc2-clk {
 		pins = "sdc2_clk";
 		bias-disable;
@@ -635,15 +563,6 @@
 		pins = "gpio126";
 		function = "gpio";
 		bias-pull-up;
-	};
-
-	dsi_sw_sel: dsi-sw-sel {
-		pins = "gpio120";
-		function = "gpio";
-
-		drive-strength = <2>;
-		bias-disable;
-		output-high;
 	};
 };
 
@@ -761,14 +680,6 @@
 	pinmux {
 		pins = "gpio41", "gpio42", "gpio43", "gpio44";
 		function = "qup3";
-	};
-};
-
-&qup_i2c10_default {
-	pinconf {
-		pins = "gpio55", "gpio56";
-		drive-strength = <2>;
-		bias-disable;
 	};
 };
 
