@@ -674,7 +674,7 @@
 
 &mpss {
 	status = "okay";
-	firmware-name = "qcom/msm8996/mba.mbn", "qcom/msm8996/modem.mbn";
+/*	firmware-name = "qcom/msm8996/mba.mbn", "qcom/msm8996/modem.mbn";*/
 };
 
 &spmi_bus {
