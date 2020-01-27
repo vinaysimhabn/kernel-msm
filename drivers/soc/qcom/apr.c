@@ -595,8 +595,8 @@ static int apr_probe(struct rpmsg_device *rpdev)
 		dev_err(dev, "APR Domain ID not specified in DT\n");
 		return ret;
 	}
-	init_completion(&apr->comp);
-	init_completion(&apr->ind_comp);
+	//init_completion(&apr->comp);
+	//init_completion(&apr->ind_comp);
 
 	dev_set_drvdata(dev, apr);
 	apr->ch = rpdev->ept;
@@ -607,18 +607,19 @@ static int apr_probe(struct rpmsg_device *rpdev)
 		return -ENOMEM;
 	}
 	INIT_WORK(&apr->rx_work, apr_rxwq);
-
+/*
 	apr->indackwq = create_singlethread_workqueue("qcom_apr_indack");
         if (!apr->indackwq) {
                 dev_err(apr->dev, "Failed to start IndAck WQ\n");
                 return -ENOMEM;
         }
-
+*/
 	INIT_LIST_HEAD(&apr->rx_list);
 	spin_lock_init(&apr->rx_lock);
 	spin_lock_init(&apr->svcs_lock);
 
 	/* Wait for PD UP notification */
+#ifdef TEST
 	ret = qmi_handle_init(&apr->qmi, 79, &servreg_ops, qmi_indication_handler);
 	if (ret < 0) {
 		pr_err("apr_probe qmi handle init failed\n");
@@ -635,7 +636,6 @@ static int apr_probe(struct rpmsg_device *rpdev)
 			   &resp);
 	if (ret < 0) {
 		pr_err("QMI tx init failed , ret - %d\n", ret);
-		qmi_handle_release(&apr->qmi);
 		return ret;
 	}
 
@@ -651,21 +651,18 @@ static int apr_probe(struct rpmsg_device *rpdev)
 	if (ret < 0) {
 		pr_err("QMI send req failed, ret - %d\n", ret);
 		qmi_txn_cancel(&txn);
-		qmi_handle_release(&apr->qmi);
 		return ret;
 	}
 
 	ret = qmi_txn_wait(&txn, msecs_to_jiffies(SERVER_TIMEOUT));
 	if (ret < 0) {
 		pr_err("QMI qmi txn wait failed, ret - %d\n", ret);
-		qmi_handle_release(&apr->qmi);
 		return ret;
 	}
 
 	/* Check the response */
 	if (resp.resp.result != QMI_RESULT_SUCCESS_V01) {
 		pr_err("QMI request failed 0x%x\n", resp.resp.error);
-		qmi_handle_release(&apr->qmi);
 		return -EREMOTEIO;
 	} else {
 		pr_err("QMI request succeeded 0x%x\n", resp.resp.error);
@@ -677,11 +674,10 @@ static int apr_probe(struct rpmsg_device *rpdev)
 		ret = wait_for_completion_timeout(&apr->ind_comp, 10 * HZ);
 		if (!ret) {
 			pr_err("timed out waiting for PD UP\n");
-			qmi_handle_release(&apr->qmi);
 			return ret;
 		}
 	}
-
+#endif
 	idr_init(&apr->svcs_idr);
 	of_register_apr_devices(dev);
 
@@ -701,7 +697,7 @@ static void apr_remove(struct rpmsg_device *rpdev)
 {
 	struct apr *apr = dev_get_drvdata(&rpdev->dev);
 
-	qmi_handle_release(&apr->qmi);
+//	qmi_handle_release(&apr->qmi);
 	device_for_each_child(&rpdev->dev, NULL, apr_remove_device);
 	flush_workqueue(apr->rxwq);
 	destroy_workqueue(apr->rxwq);
