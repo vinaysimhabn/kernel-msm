@@ -316,11 +316,6 @@
 	status = "okay";
 	vdda-supply = <&vreg_l26a_1p2>;
 
-#if 0
-	qcom,dual-dsi-mode;
-	qcom,master-dsi;
-#endif
-
 	panel@0 {
                 reg = <0>;
                 compatible = "auo,at-t070d61-39ta-b1";
@@ -352,17 +347,39 @@
 	vdds-supply = <&vreg_l1a_0p875>;
 };
 
-#if 0
 &dsi1 {
 	status = "okay";
 	vdda-supply = <&vreg_l26a_1p2>;
+	panel@0 {
+                reg = <0>;
+                compatible = "auo,at-t070d61-39ta-b1";
+
+                vcc-supply = <&vreg_l14a_1p8>;
+
+		reset-gpios = <&tlmm 89 GPIO_ACTIVE_HIGH>;
+		bklt-pwm-gpios = <&tlmm 90 GPIO_ACTIVE_HIGH>;
+
+                port {
+                        panel_in_2: endpoint {
+                                remote-endpoint = <&dsi1_out>;
+                        };
+                };
+        };
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&panel_in_2>;
+				data-lanes = <0 1 2 3>;
+			};
+		};
+	};
 };
 
 &dsi1_phy {
 	status = "okay";
 	vdds-supply = <&vreg_l1a_0p875>;
 };
-#endif
 
 &gcc {
 	protected-clocks = <GCC_QSPI_CORE_CLK>,
