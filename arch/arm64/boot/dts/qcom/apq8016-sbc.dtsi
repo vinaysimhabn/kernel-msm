@@ -265,7 +265,8 @@
 			};
 
 			tc_bridge: bridge@f {
-				status = "okay";
+				status = "disabled";
+				//status = "okay";
 
 				compatible = "toshiba,tc358775";
 				reg = <0x0f>;
@@ -448,10 +449,44 @@
 				vdda-supply = <&pm8916_l2>;
 				vddio-supply = <&pm8916_l6>;
 
+				tc358764: bridge@0 {
+					reg = <0>;
+					compatible = "toshiba,tc358764";
+					status = "okay";
+
+					vddc-supply = <&pm8916_l2>;
+					vddio-supply = <&pm8916_l6>;
+		//			vddlvds-supply = <&vcc_3v3_reg>;
+
+					reset-gpios = <&msmgpio 72 GPIO_ACTIVE_LOW>;
+					stby-gpios = <&msmgpio 99 GPIO_ACTIVE_LOW>;
+
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0>;
+							d2l_64_in: endpoint {
+								remote-endpoint = <&dsi0_out>;
+							};
+						};
+						port@1 {
+							reg = <1>;
+							d2l_64_out: endpoint {
+								remote-endpoint = <&panel_in>;
+							};
+						};
+					};
+				};
+
 				ports {
 					port@1 {
 						endpoint {
-							remote-endpoint = <&d2l_in>;
+							remote-endpoint = <&d2l_64_in>;
 							//remote-endpoint = <&adv7533_in>;
 							data-lanes = <0 1 2 3>;
 						};

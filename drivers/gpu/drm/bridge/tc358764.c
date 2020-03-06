@@ -6,7 +6,7 @@
  *	Andrzej Hajda <a.hajda@samsung.com>
  *	Maciej Purski <m.purski@samsung.com>
  */
-
+#define DEBUG
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
@@ -147,7 +147,8 @@ enum {
 #define LV_CFG_CLKPOL2		BIT(3)
 
 static const char * const tc358764_supplies[] = {
-	"vddc", "vddio", "vddlvds"
+	"vddc", "vddio"
+	//"vddc", "vddio", "vddlvds"
 };
 
 struct tc358764 {
@@ -156,6 +157,7 @@ struct tc358764 {
 	struct drm_connector connector;
 	struct regulator_bulk_data supplies[ARRAY_SIZE(tc358764_supplies)];
 	struct gpio_desc *gpio_reset;
+	struct gpio_desc *gpio_stby;
 	struct drm_panel *panel;
 	int error;
 };
@@ -272,9 +274,14 @@ static int tc358764_init(struct tc358764 *ctx)
 
 static void tc358764_reset(struct tc358764 *ctx)
 {
-	gpiod_set_value(ctx->gpio_reset, 1);
+	gpiod_set_value(ctx->gpio_stby, 0);
+	usleep_range(1000, 2000);
+	gpiod_set_value(ctx->gpio_stby, 1);
+	msleep(10);
 	usleep_range(1000, 2000);
 	gpiod_set_value(ctx->gpio_reset, 0);
+	usleep_range(1000, 2000);
+	gpiod_set_value(ctx->gpio_reset, 1);
 	usleep_range(1000, 2000);
 }
 
@@ -405,6 +412,12 @@ static int tc358764_parse_dt(struct tc358764 *ctx)
 	if (IS_ERR(ctx->gpio_reset)) {
 		dev_err(dev, "no reset GPIO pin provided\n");
 		return PTR_ERR(ctx->gpio_reset);
+	}
+
+	ctx->gpio_stby = devm_gpiod_get(dev, "stby", GPIOD_OUT_LOW);
+	if (IS_ERR(ctx->gpio_stby)) {
+		dev_err(dev, "no STBY GPIO pin provided\n");
+		return PTR_ERR(ctx->gpio_stby);
 	}
 
 	ret = drm_of_find_panel_or_bridge(ctx->dev->of_node, 1, 0, &ctx->panel,
