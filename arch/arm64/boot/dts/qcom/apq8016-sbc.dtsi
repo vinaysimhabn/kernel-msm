@@ -303,8 +303,26 @@
 
 		panel: auo,b101xtn01 {
                         status = "okay";
-                        compatible = "auo,b101xtn01";
+			compatible = "auo,b101xtn01", "panel-lvds";
                         power-supply = <&pm8916_l14>;
+
+                        width-mm = <223>;
+                        height-mm = <125>;
+
+                        data-mapping = "jeida-24";
+
+                        panel-timing {
+                                /* 1366x768 @60Hz */
+                                clock-frequency = <72000000>;
+                                hactive = <1366>;
+                                vactive = <768>;
+                                hsync-len = <70>;
+                                hfront-porch = <20>;
+                                hback-porch = <0>;
+                                vsync-len = <42>;
+                                vfront-porch = <14>;
+                                vback-porch = <0>;
+                        };
 
                         port {
                                 panel_in: endpoint {

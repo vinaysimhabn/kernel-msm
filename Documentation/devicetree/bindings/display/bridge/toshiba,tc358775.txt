@@ -7,8 +7,6 @@ Required properties:
   be one of 1, 2, 3 or 4.
  - tc, dual-link : To configure the LVDS transmitter either
   as single-link or dual-link.
- - tc, data-format: To configure the data formats
-   0 for VESA standard, 1 for JEIDA standard
  - vdd-supply: 1.2V LVDS Power Supply
  - vddio-supply: 1.8V IO Power Supply
  - stby-gpios: Standby pin, Low active 
@@ -38,7 +36,6 @@ Example:
 
 			tc,dsi-lanes = <4>;
 			tc,dual-link = <0>;
-			tc,data-format = <1>;
 
 			vdd-supply = <&pm8916_l2>;
 			vddio-supply = <&pm8916_l6>;
@@ -69,8 +66,27 @@ Example:
 
 	panel: auo,b101xtn01 {
 			status = "okay";
-			compatible = "auo,b101xtn01";
-			power-supply = <&pm8916_l14>;
+			compatible = "auo,b101xtn01", "panel-lvds";
+                        power-supply = <&pm8916_l14>;
+
+                        width-mm = <223>;
+                        height-mm = <125>;
+
+                        data-mapping = "jeida-24";
+
+                        panel-timing {
+                                /* 1366x768 @60Hz */
+                                clock-frequency = <72000000>;
+                                hactive = <1366>;
+                                vactive = <768>;
+                                hsync-len = <70>;
+                                hfront-porch = <20>;
+                                hback-porch = <0>;
+                                vsync-len = <42>;
+                                vfront-porch = <14>;
+                                vback-porch = <0>;
+                        };
+
 
 			port {
 				panel_in: endpoint {

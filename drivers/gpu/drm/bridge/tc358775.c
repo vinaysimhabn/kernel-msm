@@ -5,19 +5,8 @@
  * Copyright (C) 2020 InforceComputing
  * Author: Vinay Simha BN <vinaysimha@inforcecomputing.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
-
-/* #define DEBUG */
-/* #define TC358775_DEBUG */
+#define DEBUG
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/gpio/consumer.h>
@@ -25,17 +14,20 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <linux/regulator/consumer.h>
+#include <linux/slab.h>
 
-#include <drm/drm_mipi_dsi.h>
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_bridge.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_dp_helper.h>
+#include <drm/drm_mipi_dsi.h>
 #include <drm/drm_of.h>
 #include <drm/drm_panel.h>
-#include <drm/drm_bridge.h>
 #include <drm/drm_probe_helper.h>
+
+#define FLD_MASK(start, end)    (((1 << ((start) - (end) + 1)) - 1) << (end))
+#define FLD_VAL(val, start, end) (((val) << (end)) & FLD_MASK(start, end))
 
 /* Registers */
 
@@ -68,8 +60,8 @@
 #define PPI_D1S_ATMR    0x0148  /* Delay for Data Lane 1 in LPRX */
 #define PPI_D2S_ATMR    0x014C  /* Delay for Data Lane 2 in LPRX */
 #define PPI_D3S_ATMR    0x0150  /* Delay for Data Lane 3 in LPRX */
-#define PPI_D0S_CLRSIPOCOUNT    0x0164
 
+#define PPI_D0S_CLRSIPOCOUNT    0x0164  /* For lane 0 */
 #define PPI_D1S_CLRSIPOCOUNT    0x0168  /* For lane 1 */
 #define PPI_D2S_CLRSIPOCOUNT    0x016C  /* For lane 2 */
 #define PPI_D3S_CLRSIPOCOUNT    0x0170  /* For lane 3 */
@@ -117,13 +109,47 @@
 #define VFUEN           0x0464  /* Video Frame Timing Update Enable */
 
 /* Mux Input Select for LVDS LINK Input */
-#define LVMX0003        0x0480  /* Bit 0 to 3 */
-#define LVMX0407        0x0484  /* Bit 4 to 7 */
-#define LVMX0811        0x0488  /* Bit 8 to 11 */
-#define LVMX1215        0x048C  /* Bit 12 to 15 */
-#define LVMX1619        0x0490  /* Bit 16 to 19 */
-#define LVMX2023        0x0494  /* Bit 20 to 23 */
-#define LVMX2427        0x0498  /* Bit 24 to 27 */
+#define LV_MX0003        0x0480  /* Bit 0 to 3 */
+#define LV_MX0407        0x0484  /* Bit 4 to 7 */
+#define LV_MX0811        0x0488  /* Bit 8 to 11 */
+#define LV_MX1215        0x048C  /* Bit 12 to 15 */
+#define LV_MX1619        0x0490  /* Bit 16 to 19 */
+#define LV_MX2023        0x0494  /* Bit 20 to 23 */
+#define LV_MX2427        0x0498  /* Bit 24 to 27 */
+#define LV_MX(b0, b1, b2, b3)	(FLD_VAL(b0, 4, 0) | FLD_VAL(b1, 12, 8) | \
+				FLD_VAL(b2, 20, 16) | FLD_VAL(b3, 28, 24))
+
+/* Input bit numbers used in mux registers */
+enum {
+	LVI_R0,
+	LVI_R1,
+	LVI_R2,
+	LVI_R3,
+	LVI_R4,
+	LVI_R5,
+	LVI_R6,
+	LVI_R7,
+	LVI_G0,
+	LVI_G1,
+	LVI_G2,
+	LVI_G3,
+	LVI_G4,
+	LVI_G5,
+	LVI_G6,
+	LVI_G7,
+	LVI_B0,
+	LVI_B1,
+	LVI_B2,
+	LVI_B3,
+	LVI_B4,
+	LVI_B5,
+	LVI_B6,
+	LVI_B7,
+	LVI_HS,
+	LVI_VS,
+	LVI_DE,
+	LVI_L0
+};
 
 #define LVCFG           0x049C  /* LVDS Configuration  */
 #define LVPHY0          0x04A0  /* LVDS PHY 0 */
@@ -144,6 +170,10 @@
 /* Chip ID and Revision ID Register */
 #define IDREG           0x0580
 
+#define LPX_PERIOD		4
+#define TTA_GET			0x40000
+#define TTA_SURE		6
+
 #define TC358775XBG_ID  0x00007500
 
 /* Debug Registers */
@@ -156,9 +186,10 @@
 
 #define L0EN BIT(1)
 
+
 #define TC358775_VPCTRL_VSDELAY__MASK	0x3FF00000
 #define TC358775_VPCTRL_VSDELAY__SHIFT	20
-static inline uint32_t TC358775_VPCTRL_VSDELAY(uint32_t val)
+static inline u32 TC358775_VPCTRL_VSDELAY(uint32_t val)
 {
 	return ((val) << TC358775_VPCTRL_VSDELAY__SHIFT) &
 			TC358775_VPCTRL_VSDELAY__MASK;
@@ -166,7 +197,7 @@ static inline uint32_t TC358775_VPCTRL_VSDELAY(uint32_t val)
 
 #define TC358775_VPCTRL_OPXLFMT__MASK	0x00000100
 #define TC358775_VPCTRL_OPXLFMT__SHIFT	8
-static inline uint32_t TC358775_VPCTRL_OPXLFMT(uint32_t val)
+static inline u32 TC358775_VPCTRL_OPXLFMT(uint32_t val)
 {
 	return ((val) << TC358775_VPCTRL_OPXLFMT__SHIFT) &
 			TC358775_VPCTRL_OPXLFMT__MASK;
@@ -174,7 +205,7 @@ static inline uint32_t TC358775_VPCTRL_OPXLFMT(uint32_t val)
 
 #define TC358775_VPCTRL_MSF__MASK	0x00000001
 #define TC358775_VPCTRL_MSF__SHIFT	0
-static inline uint32_t TC358775_VPCTRL_MSF(uint32_t val)
+static inline u32 TC358775_VPCTRL_MSF(uint32_t val)
 {
 	return ((val) << TC358775_VPCTRL_MSF__SHIFT) &
 			TC358775_VPCTRL_MSF__MASK;
@@ -182,7 +213,7 @@ static inline uint32_t TC358775_VPCTRL_MSF(uint32_t val)
 
 #define TC358775_LVCFG_PCLKDIV__MASK	0x000000f0
 #define TC358775_LVCFG_PCLKDIV__SHIFT	4
-static inline uint32_t TC358775_LVCFG_PCLKDIV(uint32_t val)
+static inline u32 TC358775_LVCFG_PCLKDIV(uint32_t val)
 {
 	return ((val) << TC358775_LVCFG_PCLKDIV__SHIFT) &
 			TC358775_LVCFG_PCLKDIV__MASK;
@@ -190,30 +221,11 @@ static inline uint32_t TC358775_LVCFG_PCLKDIV(uint32_t val)
 
 #define TC358775_LVCFG_LVDLINK__MASK                         0x00000002
 #define TC358775_LVCFG_LVDLINK__SHIFT                        0
-static inline uint32_t TC358775_LVCFG_LVDLINK(uint32_t val)
+static inline u32 TC358775_LVCFG_LVDLINK(uint32_t val)
 {
 	return ((val) << TC358775_LVCFG_LVDLINK__SHIFT) &
 			TC358775_LVCFG_LVDLINK__MASK;
 }
-
-static const struct reg_sequence tc_fixed_registers[] = {
-	{ 0x013C, 0x00040006 },
-	{ 0x0114, 0x00000004 },
-	{ 0x0164, 0x00000003 },
-	{ 0x0168, 0x00000003 },
-	{ 0x016C, 0x00000003 },
-	{ 0x0170, 0x00000003 },
-};
-
-static const struct reg_sequence tc_vesa_data_format_registers[] = {
-	{ 0x0480, 0x03020100 },
-	{ 0x0484, 0x08050704 },
-	{ 0x0488, 0x0F0E0A09 },
-	{ 0x048C, 0x100D0C0B },
-	{ 0x0490, 0x12111716 },
-	{ 0x0494, 0x1B151413 },
-	{ 0x0498, 0x061A1918 },
-};
 
 static const char * const regulator_names[] = {
 	"vdd",
@@ -240,7 +252,6 @@ struct tc_data {
 	struct gpio_desc	*stby_gpio;
 	u32                     rev;
 	u8                      dual_link; /* single-link or dual-link */
-	u8			data_format; /* VESA or JEIDA */
 };
 
 static inline struct tc_data *bridge_to_tc(struct drm_bridge *b)
@@ -264,13 +275,13 @@ static void tc_bridge_pre_enable(struct drm_bridge *bridge)
 		dev_err(dev, "regulator enable failed, %d\n", ret);
 		return;
 	}
-	mdelay(10);
+	usleep_range(10000, 20000);
 
 	gpiod_set_value(tc->stby_gpio, 0);
-	mdelay(10);
+	usleep_range(10, 20);
 
 	gpiod_set_value(tc->reset_gpio, 0);
-	ndelay(50);
+	usleep_range(10000, 20000);
 
 	drm_panel_prepare(tc->panel);
 }
@@ -284,13 +295,7 @@ static void tc_bridge_disable(struct drm_bridge *bridge)
 	ret = regulator_bulk_disable(ARRAY_SIZE(tc->supplies), tc->supplies);
 	if (ret < 0)
 		dev_err(dev, "regulator disable failed, %d\n", ret);
-	mdelay(10);
-
-	gpiod_set_value(tc->stby_gpio, 1);
-	mdelay(10);
-
-	gpiod_set_value(tc->reset_gpio, 1);
-	ndelay(50);
+	usleep_range(30000, 40000);
 
 	drm_panel_disable(tc->panel);
 }
@@ -299,24 +304,14 @@ static void tc_bridge_post_disable(struct drm_bridge *bridge)
 {
 	struct tc_data *tc = bridge_to_tc(bridge);
 
+	gpiod_set_value(tc->stby_gpio, 1);
+	usleep_range(10, 20);
+
+	gpiod_set_value(tc->reset_gpio, 1);
+	usleep_range(10000, 20000);
+
 	drm_panel_unprepare(tc->panel);
 }
-
-#ifdef TC358775_DEBUG
-static u32 d2l_read(struct tc_data *tc, u16 reg)
-{
-	int ret;
-	u32 data;
-
-	ret = regmap_bulk_read(tc->regmap, reg, &data, 1);
-	if (ret)
-		return ret;
-
-	pr_debug("d2l: I2C : reg:%04x value:%08x\n", reg, data);
-
-	return data;
-}
-#endif
 
 static int d2l_write(struct tc_data *tc, u16 reg, u32 data)
 {
@@ -324,9 +319,6 @@ static int d2l_write(struct tc_data *tc, u16 reg, u32 data)
 
 	ret = regmap_bulk_write(tc->regmap, reg, (u32[]) {data}, 1);
 
-#ifdef TC358775_DEBUG
-	d2l_read(tc, reg);
-#endif
 	return ret;
 }
 
@@ -337,6 +329,7 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	u32 hbpr, hpw, htime1, hfpr, hsize, htime2;
 	u32 vbpr, vpw, vtime1, vfpr, vsize, vtime2;
 	u32 val = 0;
+	u16 bus_formats;
 	struct drm_display_mode *mode;
 
 	mode = &bridge->encoder->crtc->state->adjusted_mode;
@@ -362,16 +355,18 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 		dev_err(tc->dev, "can not read device ID: %d\n", ret);
 		return;
 	}
-	pr_debug("tc IDREG %04x Rev. %08x\n", IDREG, tc->rev);
+	dev_info(tc->dev, "DSI2LVDS Chip ID.%02x Revision ID. %02x\n",
+			(tc->rev>>8)&0xFF, (tc->rev)&0xFF);
 
 	d2l_write(tc, SYSRST, 0x000000FF);
-	mdelay(30);
+	usleep_range(30000, 40000);
 
-	ret = regmap_register_patch(tc->regmap,
-				    tc_fixed_registers,
-				    ARRAY_SIZE(tc_fixed_registers));
-	if (ret)
-		return;
+	d2l_write(tc, PPI_TX_RX_TA, TTA_GET | TTA_SURE);
+	d2l_write(tc, PPI_LPTXTIMECNT, LPX_PERIOD);
+	d2l_write(tc, PPI_D0S_CLRSIPOCOUNT, 3);
+	d2l_write(tc, PPI_D1S_CLRSIPOCOUNT, 3);
+	d2l_write(tc, PPI_D2S_CLRSIPOCOUNT, 3);
+	d2l_write(tc, PPI_D3S_CLRSIPOCOUNT, 3);
 
 	val = ((L0EN << tc->num_dsi_lanes) - L0EN) | DSI_CLEN_BIT;
 	d2l_write(tc, PPI_LANEENABLE, val);
@@ -382,7 +377,11 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	val = TC358775_VPCTRL_VSDELAY(21); //TODO : to set the dynamic value
 
-	if (tc->connector.display_info.bpc == 8) {/* RGB888 */
+	bus_formats = tc->connector.display_info.bus_formats[0];
+	dev_info(tc->dev, "DSI2LVDS bus_formats %04x\n", bus_formats);
+
+	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG
+		|| bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) {/* RGB888 */
 		val |= TC358775_VPCTRL_OPXLFMT(1);
 		d2l_write(tc, VPCTRL, val);
 	} else {				/* RGB666 */
@@ -399,13 +398,15 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	d2l_write(tc, SYSRST, 0x00000004);
 	d2l_write(tc, LVPHY0, 0x00040006);
 
-	if (tc->data_format) { /* Data Format VESA=0 , JEIDA=1 */
-		ret = regmap_register_patch
-			(tc->regmap,
-			 tc_vesa_data_format_registers,
-			 ARRAY_SIZE(tc_vesa_data_format_registers));
-		if (ret)
-			return;
+	/* default jeida-24 */
+	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG ) { /* vesa-24, TODO jeida-18*/
+		d2l_write(tc, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
+		d2l_write(tc, LV_MX0407, LV_MX(LVI_R4, LVI_R7, LVI_R5, LVI_G0));
+		d2l_write(tc, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_G6, LVI_G7));
+		d2l_write(tc, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
+		d2l_write(tc, LV_MX1619, LV_MX(LVI_B6, LVI_B7, LVI_B1, LVI_B2));
+		d2l_write(tc, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
+		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_R6));
 	}
 
 	d2l_write(tc, VFUEN, 0x00000001);
@@ -480,10 +481,9 @@ static const struct drm_connector_funcs tc_connector_funcs = {
 int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 {
 	u32 num_lanes;
-	u8 dual_link, data_format;
+	u8 dual_link;
 
 	of_property_read_u8(np, "tc,dual-link", &dual_link);
-	of_property_read_u8(np, "tc,data-format", &data_format);
 	of_property_read_u32(np, "tc,dsi-lanes", &num_lanes);
 
 	if (num_lanes < 1 || num_lanes > 4)
@@ -491,7 +491,6 @@ int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 
 	tc->num_dsi_lanes = num_lanes;
 	tc->dual_link = dual_link;
-	tc->data_format = data_format;
 
 	tc->host_node = of_graph_get_remote_node(np, 0, 0);
 	if (!tc->host_node)
@@ -566,7 +565,7 @@ static int tc_bridge_attach(struct drm_bridge *bridge)
 
 	ret = tc358775_attach_dsi(tc);
 
-	return 0;
+	return ret;
 }
 
 static const struct drm_bridge_funcs tc_bridge_funcs = {
