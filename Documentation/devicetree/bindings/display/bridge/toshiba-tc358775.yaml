@@ -26,10 +26,6 @@ properties:
    description: Number of DSI data lanes connected to the DSI host. It should
   be one of 1, 2, 3 or 4.
 
- tc, dual-link: 1
-   maxItems: 1
-   description: To configure the LVDS transmitter either as single-link or dual-link.
-
  vdd-supply:
    maxItems: 1
    description:  1.2V LVDS Power Supply
@@ -59,10 +55,17 @@ properties:
         type: object
         description: |
           Video port for LVDS output (panel or connector).
+      port@2:
+        type: object
+        description: |
+          Video port for Dual link LVDS output (panel or connector).
 
       required:
       - port@0
       - port@1
+
+      optional:
+      - port@2
 
 required:
  - compatible
@@ -109,8 +112,16 @@ examples:
 
 			port@1 {
 				reg = <1>;
-				d2l_out: endpoint {
-					remote-endpoint = <&panel_in>;
+				lvds0_out: endpoint {
+					remote-endpoint = <&panel_in0>;
+				};
+			};
+
+                        /* In case of dual link lvds panel/connector */
+			port@2 {
+				reg = <2>;
+				lvds1_out: endpoint {
+					remote-endpoint = <&panel_in1>;
 				};
 			};
 		};
@@ -141,11 +152,53 @@ examples:
 		};
 
 		port {
-			panel_in: endpoint {
-				remote-endpoint = <&d2l_out>;
+			panel_in0: endpoint {
+				remote-endpoint = <&lvds0_out>;
 			};
 		};
  };
+
+ dual_link: panel-lvds {
+                compatible = "advantech,idk-2121wr", "panel-lvds";
+
+                width-mm = <476>;
+                height-mm = <268>;
+
+                data-mapping = "vesa-24";
+
+                panel-timing {
+                        clock-frequency = <148500000>;
+                        hactive = <1920>;
+                        vactive = <1080>;
+                        hsync-len = <44>;
+                        hfront-porch = <88>;
+                        hback-porch = <148>;
+                        vfront-porch = <4>;
+                        vback-porch = <36>;
+                        vsync-len = <5>;
+                };
+
+                ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        port@0 {
+                                reg = <0>;
+                                dual-lvds-odd-pixels;
+                                panel_in0: endpoint {
+                                        remote-endpoint = <&lvds0_out>;
+                                };
+                        };
+
+                        port@1 {
+                                reg = <1>;
+                                dual-lvds-even-pixels;
+                                panel_in1: endpoint {
+                                        remote-endpoint = <&lvds1_out>;
+                                };
+                        };
+                };
+        };
 
   mdss@1a00000 {
 	status = "okay";
