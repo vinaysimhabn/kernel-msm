@@ -3,7 +3,7 @@
  * tc358775 DSI to LVDS bridge driver
  *
  * Copyright (C) 2020 InforceComputing
- * Author: Vinay Simha BN <vinaysimha@inforcecomputing.com>
+ * Author: Vinay Simha BN <simhavcs@gmail.com>
  *
  */
 #define DEBUG
@@ -227,11 +227,6 @@ static inline u32 TC358775_LVCFG_LVDLINK(uint32_t val)
 			TC358775_LVCFG_LVDLINK__MASK;
 }
 
-static const char * const regulator_names[] = {
-	"vdd",
-	"vddio"
-};
-
 struct tc_data {
 	struct i2c_client	*i2c;
 
@@ -242,15 +237,15 @@ struct tc_data {
 	struct drm_connector	connector;
 	struct drm_panel	*panel;
 
-	enum drm_connector_status status;
+//	enum drm_connector_status status;
 	struct device_node *host_node;
 	struct mipi_dsi_device *dsi;
 	u8 num_dsi_lanes;
 
-	struct regulator_bulk_data supplies[ARRAY_SIZE(regulator_names)];
+	struct regulator	*vdd;
+	struct regulator	*vddio;
 	struct gpio_desc	*reset_gpio;
 	struct gpio_desc	*stby_gpio;
-	u32                     rev;
 	u8                      dual_link; /* single-link or dual-link */
 };
 
@@ -270,9 +265,16 @@ static void tc_bridge_pre_enable(struct drm_bridge *bridge)
 	struct device *dev = &tc->dsi->dev;
 	int ret;
 
-	ret = regulator_bulk_enable(ARRAY_SIZE(tc->supplies), tc->supplies);
+	ret = regulator_enable(tc->vddio);
 	if (ret < 0) {
-		dev_err(dev, "regulator enable failed, %d\n", ret);
+		dev_err(dev, "regulator vddio enable failed, %d\n", ret);
+		return;
+	}
+	usleep_range(10000, 20000);
+
+	ret = regulator_enable(tc->vdd);
+	if (ret < 0) {
+		dev_err(dev, "regulator vdd enable failed, %d\n", ret);
 		return;
 	}
 	usleep_range(10000, 20000);
@@ -289,13 +291,6 @@ static void tc_bridge_pre_enable(struct drm_bridge *bridge)
 static void tc_bridge_disable(struct drm_bridge *bridge)
 {
 	struct tc_data *tc = bridge_to_tc(bridge);
-	struct device *dev = &tc->dsi->dev;
-	int ret;
-
-	ret = regulator_bulk_disable(ARRAY_SIZE(tc->supplies), tc->supplies);
-	if (ret < 0)
-		dev_err(dev, "regulator disable failed, %d\n", ret);
-	usleep_range(30000, 40000);
 
 	drm_panel_disable(tc->panel);
 }
@@ -303,6 +298,18 @@ static void tc_bridge_disable(struct drm_bridge *bridge)
 static void tc_bridge_post_disable(struct drm_bridge *bridge)
 {
 	struct tc_data *tc = bridge_to_tc(bridge);
+	struct device *dev = &tc->dsi->dev;
+	int ret;
+
+	ret = regulator_disable(tc->vddio);
+	if (ret < 0)
+		dev_err(dev, "regulator vddio disable failed, %d\n", ret);
+	usleep_range(10000, 20000);
+
+	ret = regulator_disable(tc->vdd);
+	if (ret < 0)
+		dev_err(dev, "regulator vdd disable failed, %d\n", ret);
+	usleep_range(10000, 20000);
 
 	gpiod_set_value(tc->stby_gpio, 1);
 	usleep_range(10, 20);
@@ -350,13 +357,13 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	htime2 = (hfpr << 16) + hsize;
 	vtime2 = (vfpr << 16) + vsize;
 
-	ret = regmap_read(tc->regmap, IDREG, &tc->rev);
+	ret = regmap_read(tc->regmap, IDREG, &val);
 	if (ret) {
 		dev_err(tc->dev, "can not read device ID: %d\n", ret);
 		return;
 	}
 	dev_info(tc->dev, "DSI2LVDS Chip ID.%02x Revision ID. %02x\n",
-			(tc->rev>>8)&0xFF, (tc->rev)&0xFF);
+			(val>>8)&0xFF, val&0xFF);
 
 	d2l_write(tc, SYSRST, 0x000000FF);
 	usleep_range(30000, 40000);
@@ -401,7 +408,7 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	/* default jeida-24 */
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG) {
-		/* vesa-24, TODO jeida-18*/
+		/* vesa-24 */
 		d2l_write(tc, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
 		d2l_write(tc, LV_MX0407, LV_MX(LVI_R4, LVI_R7, LVI_R5, LVI_G0));
 		d2l_write(tc, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_G6, LVI_G7));
@@ -409,6 +416,17 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 		d2l_write(tc, LV_MX1619, LV_MX(LVI_B6, LVI_B7, LVI_B1, LVI_B2));
 		d2l_write(tc, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
 		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_R6));
+	}
+
+	if (bus_formats == MEDIA_BUS_FMT_RGB666_1X7X3_SPWG) {
+		/* jeida-18*/
+		d2l_write(tc, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
+		d2l_write(tc, LV_MX0407, LV_MX(LVI_R4, LVI_L0, LVI_R5, LVI_G0));
+		d2l_write(tc, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_L0, LVI_L0));
+		d2l_write(tc, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
+		d2l_write(tc, LV_MX1619, LV_MX(LVI_L0, LVI_L0, LVI_B1, LVI_B2));
+		d2l_write(tc, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
+		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_L0));
 	}
 
 	d2l_write(tc, VFUEN, 0x00000001);
@@ -445,10 +463,10 @@ static int tc_connector_get_modes(struct drm_connector *connector)
 	return count;
 }
 
-static int tc_connector_mode_valid(struct drm_connector *connector,
-				   struct drm_display_mode *mode)
+static int tc_mode_valid(struct drm_bridge *bridge,
+			const struct drm_display_mode *mode)
 {
-	struct tc_data *tc = connector_to_tc(connector);
+	struct tc_data *tc = bridge_to_tc(bridge);
 
 	/* Maximum pixel clock speed 135MHz-single-link/270MHz-dual-link */
 	if ((mode->clock > 135000 && tc->dual_link == 0) ||
@@ -468,7 +486,6 @@ tc_connector_best_encoder(struct drm_connector *connector)
 
 static const struct drm_connector_helper_funcs tc_connector_helper_funcs = {
 	.get_modes = tc_connector_get_modes,
-	.mode_valid = tc_connector_mode_valid,
 	.best_encoder = tc_connector_best_encoder,
 };
 
@@ -575,6 +592,7 @@ static const struct drm_bridge_funcs tc_bridge_funcs = {
 	.pre_enable = tc_bridge_pre_enable,
 	.enable = tc_bridge_enable,
 	.disable = tc_bridge_disable,
+	.mode_valid = tc_mode_valid,
 	.post_disable = tc_bridge_post_disable,
 };
 
@@ -594,7 +612,6 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct device *dev = &client->dev;
 	struct tc_data *tc;
 	int ret;
-	unsigned int i;
 
 	tc = devm_kzalloc(dev, sizeof(*tc), GFP_KERNEL);
 	if (!tc)
@@ -602,7 +619,7 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	tc->dev = dev;
 	tc->i2c = client;
-	tc->status = connector_status_connected;
+//	tc->status = connector_status_connected;
 
 	/* port@1 is the output port */
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0, &tc->panel, NULL);
@@ -613,13 +630,19 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (ret)
 		return ret;
 
-	for (i = 0; i < ARRAY_SIZE(tc->supplies); i++)
-		tc->supplies[i].supply = regulator_names[i];
+	tc->vddio = devm_regulator_get(dev, "vddio-supply");
+	if (IS_ERR(tc->vddio)) {
+		ret = PTR_ERR(tc->vddio);
+		dev_err(dev, "vddio-supply not found\n");
+		return ret;
+	}
 
-	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(tc->supplies),
-				      tc->supplies);
-	if (ret < 0)
-		dev_err(dev, "failed to init regulator, ret=%d\n", ret);
+	tc->vdd = devm_regulator_get(dev, "vdd-supply");
+	if (IS_ERR(tc->vdd)) {
+		ret = PTR_ERR(tc->vddio);
+		dev_err(dev, "vdd-supply not found\n");
+		return ret;
+	}
 
 	tc->stby_gpio = devm_gpiod_get(dev, "stby", GPIOD_OUT_HIGH);
 	if (IS_ERR(tc->stby_gpio)) {
@@ -683,6 +706,6 @@ static struct i2c_driver tc358775_driver = {
 };
 module_i2c_driver(tc358775_driver);
 
-MODULE_AUTHOR("Vinay Simha BN <vinaysimha@inforcecomputing.com>");
-MODULE_DESCRIPTION("tc358775 LVDS encoder driver");
+MODULE_AUTHOR("Vinay Simha BN <simhavcs@gmail.com>");
+MODULE_DESCRIPTION("TC358775 DSI/LVDS bridge driver");
 MODULE_LICENSE("GPL v2");
