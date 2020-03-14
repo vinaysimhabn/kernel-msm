@@ -227,6 +227,12 @@ static inline u32 TC358775_LVCFG_LVDLINK(uint32_t val)
 			TC358775_LVCFG_LVDLINK__MASK;
 }
 
+enum tc358775_ports {
+	TC358775_DSI_IN,
+	TC358775_LVDS_OUT0,
+	TC358775_LVDS_OUT1,
+};
+
 struct tc_data {
 	struct i2c_client	*i2c;
 
@@ -246,7 +252,7 @@ struct tc_data {
 	struct regulator	*vddio;
 	struct gpio_desc	*reset_gpio;
 	struct gpio_desc	*stby_gpio;
-	u8                      dual_link; /* single-link or dual-link */
+	bool                      dual_link; /* single-link or dual-link */
 };
 
 static inline struct tc_data *bridge_to_tc(struct drm_bridge *b)
@@ -432,8 +438,11 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	d2l_write(tc, VFUEN, 0x00000001);
 
 	val = TC358775_LVCFG_PCLKDIV(DIVIDE_BY_3) | LVCFG_LVEN_BIT;
-	if (tc->dual_link)
+	if (!tc->dual_link) {
+		dev_dbg(tc->dev, "LVDLINK operating in %s-link mode\n",
+		tc->dual_link ? "dual" : "single");
 		val |= TC358775_LVCFG_LVDLINK(1);
+	}
 
 	d2l_write(tc, LVCFG, val);
 
@@ -469,8 +478,8 @@ static int tc_mode_valid(struct drm_bridge *bridge,
 	struct tc_data *tc = bridge_to_tc(bridge);
 
 	/* Maximum pixel clock speed 135MHz-single-link/270MHz-dual-link */
-	if ((mode->clock > 135000 && tc->dual_link == 0) ||
-	    (mode->clock > 270000 && tc->dual_link == 1))
+	if ((mode->clock > 135000 && tc->dual_link) ||
+	    (mode->clock > 270000 && tc->dual_link))
 		return MODE_CLOCK_HIGH;
 
 	return MODE_OK;
@@ -500,22 +509,37 @@ static const struct drm_connector_funcs tc_connector_funcs = {
 int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 {
 	u32 num_lanes;
-	u8 dual_link;
+	struct device_node *endpoint;
+	struct device_node *remote;
 
-	of_property_read_u8(np, "tc,dual-link", &dual_link);
 	of_property_read_u32(np, "tc,dsi-lanes", &num_lanes);
 
 	if (num_lanes < 1 || num_lanes > 4)
 		return -EINVAL;
 
 	tc->num_dsi_lanes = num_lanes;
-	tc->dual_link = dual_link;
 
 	tc->host_node = of_graph_get_remote_node(np, 0, 0);
 	if (!tc->host_node)
 		return -ENODEV;
 
 	of_node_put(tc->host_node);
+
+	endpoint = of_graph_get_endpoint_by_regs(tc->dev->of_node,
+						 TC358775_LVDS_OUT1, -1);
+	if (endpoint) {
+		remote = of_graph_get_remote_port_parent(endpoint);
+		of_node_put(endpoint);
+
+		if (remote) {
+			if (of_device_is_available(remote))
+				tc->dual_link = true;
+			of_node_put(remote);
+		}
+	}
+
+	dev_dbg(tc->dev, "operating in %s-link mode\n",
+		tc->dual_link ? "dual" : "single");
 
 	return 0;
 }
@@ -621,8 +645,8 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	tc->i2c = client;
 //	tc->status = connector_status_connected;
 
-	/* port@1 is the output port */
-	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0, &tc->panel, NULL);
+	ret = drm_of_find_panel_or_bridge(dev->of_node, TC358775_LVDS_OUT0,
+						0, &tc->panel, NULL);
 	if (ret && ret != -ENODEV)
 		return ret;
 
