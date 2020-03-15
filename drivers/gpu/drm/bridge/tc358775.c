@@ -240,10 +240,8 @@ struct tc_data {
 	struct regmap		*regmap;
 
 	struct drm_bridge	bridge;
-	struct drm_connector	connector;
-	struct drm_panel	*panel;
+	struct drm_bridge	*panel_bridge;
 
-//	enum drm_connector_status status;
 	struct device_node *host_node;
 	struct mipi_dsi_device *dsi;
 	u8 num_dsi_lanes;
@@ -258,11 +256,6 @@ struct tc_data {
 static inline struct tc_data *bridge_to_tc(struct drm_bridge *b)
 {
 	return container_of(b, struct tc_data, bridge);
-}
-
-static inline struct tc_data *connector_to_tc(struct drm_connector *c)
-{
-	return container_of(c, struct tc_data, connector);
 }
 
 static void tc_bridge_pre_enable(struct drm_bridge *bridge)
@@ -290,15 +283,6 @@ static void tc_bridge_pre_enable(struct drm_bridge *bridge)
 
 	gpiod_set_value(tc->reset_gpio, 0);
 	usleep_range(10000, 20000);
-
-	drm_panel_prepare(tc->panel);
-}
-
-static void tc_bridge_disable(struct drm_bridge *bridge)
-{
-	struct tc_data *tc = bridge_to_tc(bridge);
-
-	drm_panel_disable(tc->panel);
 }
 
 static void tc_bridge_post_disable(struct drm_bridge *bridge)
@@ -322,8 +306,6 @@ static void tc_bridge_post_disable(struct drm_bridge *bridge)
 
 	gpiod_set_value(tc->reset_gpio, 1);
 	usleep_range(10000, 20000);
-
-	drm_panel_unprepare(tc->panel);
 }
 
 static int d2l_write(struct tc_data *tc, u16 reg, u32 data)
@@ -390,7 +372,8 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	val = TC358775_VPCTRL_VSDELAY(21); //TODO : to set the dynamic value
 
-	bus_formats = tc->connector.display_info.bus_formats[0];
+//bus_formats = tc->connector.display_info.bus_formats[0];
+	bus_formats = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG;
 
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG
 		|| bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) {
@@ -445,31 +428,6 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	}
 
 	d2l_write(tc, LVCFG, val);
-
-	drm_panel_enable(tc->panel);
-}
-
-static int tc_connector_get_modes(struct drm_connector *connector)
-{
-	struct tc_data *tc = connector_to_tc(connector);
-	struct edid *edid;
-	unsigned int count;
-
-	if (tc->panel && tc->panel->funcs && tc->panel->funcs->get_modes) {
-		count = tc->panel->funcs->get_modes(tc->panel, connector);
-		if (count > 0)
-			return count;
-	}
-
-	edid = drm_get_edid(connector, tc->i2c->adapter);
-	if (!edid)
-		return 0;
-
-	drm_connector_update_edid_property(connector, edid);
-	count = drm_add_edid_modes(connector, edid);
-	kfree(edid);
-
-	return count;
 }
 
 static int tc_mode_valid(struct drm_bridge *bridge,
@@ -484,27 +442,6 @@ static int tc_mode_valid(struct drm_bridge *bridge,
 
 	return MODE_OK;
 }
-
-static struct drm_encoder *
-tc_connector_best_encoder(struct drm_connector *connector)
-{
-	struct tc_data *tc = connector_to_tc(connector);
-
-	return tc->bridge.encoder;
-}
-
-static const struct drm_connector_helper_funcs tc_connector_helper_funcs = {
-	.get_modes = tc_connector_get_modes,
-	.best_encoder = tc_connector_best_encoder,
-};
-
-static const struct drm_connector_funcs tc_connector_funcs = {
-	.fill_modes = drm_helper_probe_single_connector_modes,
-	.destroy = drm_connector_cleanup,
-	.reset = drm_atomic_helper_connector_reset,
-	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
-	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
-};
 
 int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 {
@@ -544,12 +481,14 @@ int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 	return 0;
 }
 
-int tc358775_attach_dsi(struct tc_data *tc)
+static int tc_bridge_attach(struct drm_bridge *bridge)
 {
+	struct tc_data *tc = bridge_to_tc(bridge);
 	struct device *dev = &tc->i2c->dev;
 	struct mipi_dsi_host *host;
 	struct mipi_dsi_device *dsi;
-	int ret = 0;
+	int ret;
+
 	const struct mipi_dsi_device_info info = { .type = "tc358775",
 							.channel = 0,
 							.node = NULL,
@@ -580,34 +519,12 @@ int tc358775_attach_dsi(struct tc_data *tc)
 		goto err_dsi_attach;
 	}
 
-	return 0;
-
+	/* Attach the panel-bridge to the dsi bridge */
+	return drm_bridge_attach(bridge->encoder, tc->panel_bridge,
+				 &tc->bridge);
 err_dsi_attach:
 	mipi_dsi_device_unregister(dsi);
 err_dsi_device:
-	return ret;
-}
-
-static int tc_bridge_attach(struct drm_bridge *bridge)
-{
-	struct tc_data *tc = bridge_to_tc(bridge);
-	struct drm_device *drm = bridge->dev;
-	int ret;
-
-	/* Create LVDS connector */
-	drm_connector_helper_add(&tc->connector, &tc_connector_helper_funcs);
-	ret = drm_connector_init(drm, &tc->connector, &tc_connector_funcs,
-				 DRM_MODE_CONNECTOR_LVDS);
-	if (ret)
-		return ret;
-
-	if (tc->panel)
-		drm_panel_attach(tc->panel, &tc->connector);
-
-	drm_connector_attach_encoder(&tc->connector, tc->bridge.encoder);
-
-	ret = tc358775_attach_dsi(tc);
-
 	return ret;
 }
 
@@ -615,7 +532,6 @@ static const struct drm_bridge_funcs tc_bridge_funcs = {
 	.attach = tc_bridge_attach,
 	.pre_enable = tc_bridge_pre_enable,
 	.enable = tc_bridge_enable,
-	.disable = tc_bridge_disable,
 	.mode_valid = tc_mode_valid,
 	.post_disable = tc_bridge_post_disable,
 };
@@ -634,6 +550,7 @@ static const struct regmap_config tc_regmap_config = {
 static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
+	struct drm_panel *panel;
 	struct tc_data *tc;
 	int ret;
 
@@ -643,12 +560,19 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	tc->dev = dev;
 	tc->i2c = client;
-//	tc->status = connector_status_connected;
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, TC358775_LVDS_OUT0,
-						0, &tc->panel, NULL);
-	if (ret && ret != -ENODEV)
+						0, &panel, NULL);
+	if (ret < 0)
 		return ret;
+	if (!panel)
+		return -ENODEV;
+
+	panel->connector_type = DRM_MODE_CONNECTOR_LVDS;
+
+	tc->panel_bridge = devm_drm_panel_bridge_add(dev, panel);
+	if (IS_ERR(tc->panel_bridge))
+		return PTR_ERR(tc->panel_bridge);
 
 	ret = tc358775_parse_dt(dev->of_node, tc);
 	if (ret)
