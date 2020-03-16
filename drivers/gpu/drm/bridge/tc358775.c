@@ -48,6 +48,8 @@
 
 /* DSI PPI Layer Registers */
 #define PPI_STARTPPI    0x0104  /* START control bit of PPI-TX function. */
+#define PPI_START_FUNCTION      1
+
 #define PPI_BUSYPPI     0x0108
 #define PPI_LINEINITCNT 0x0110  /* Line Initialization Wait Counter  */
 #define PPI_LPTXTIMECNT 0x0114
@@ -87,6 +89,8 @@
 #define HSTIMEOUT       0x01F0  /* HS Rx Time Out Counter */
 #define HSTIMEOUTENABLE 0x01F4  /* Enable HS Rx Time Out Counter */
 #define DSI_STARTDSI    0x0204  /* START control bit of DSI-TX function */
+#define DSI_RX_START	1
+
 #define DSI_BUSYDSI     0x0208
 #define DSI_LANEENABLE  0x0210  /* Enables each lane at the Protocol layer. */
 #define DSI_LANESTATUS0 0x0214  /* Displays lane is in HS RX mode. */
@@ -107,6 +111,7 @@
 #define VTIM1           0x045C  /* Vertical Timing Control 1 */
 #define VTIM2           0x0460  /* Vertical Timing Control 2 */
 #define VFUEN           0x0464  /* Video Frame Timing Update Enable */
+#define VFUEN_EN	BIT(0)  /* Upload Enable */
 
 /* Mux Input Select for LVDS LINK Input */
 #define LV_MX0003        0x0480  /* Bit 0 to 3 */
@@ -153,9 +158,22 @@ enum {
 
 #define LVCFG           0x049C  /* LVDS Configuration  */
 #define LVPHY0          0x04A0  /* LVDS PHY 0 */
+#define LV_PHY0_RST(v)          FLD_VAL(v, 22, 22) /* PHY reset */
+#define LV_PHY0_IS(v)           FLD_VAL(v, 15, 14)
+#define LV_PHY0_ND(v)           FLD_VAL(v, 4, 0) /* Frequency range select */
+#define LV_PHY0_PRBS_ON(v)      FLD_VAL(v, 20, 16) /* Clock/Data Flag pins */
+
 #define LVPHY1          0x04A4  /* LVDS PHY 1 */
 #define SYSSTAT         0x0500  /* System Status  */
 #define SYSRST          0x0504  /* System Reset  */
+
+#define SYS_RST_I2CS	BIT(0) /* Reset I2C-Slave controller */
+#define SYS_RST_I2CM	BIT(1) /* Reset I2C-Master controller */
+#define SYS_RST_LCD	BIT(2) /* Reset LCD controller */
+#define SYS_RST_BM	BIT(3) /* Reset Bus Management controller */
+#define SYS_RST_DSIRX	BIT(4) /* Reset DSI-RX and App controller */
+#define SYS_RST_REG	BIT(5) /* Reset Register module */
+
 /* GPIO Registers */
 #define GPIOC           0x0520  /* GPIO Control  */
 #define GPIOO           0x0524  /* GPIO Output  */
@@ -185,7 +203,6 @@ enum {
 #define LVCFG_LVEN_BIT		BIT(0)
 
 #define L0EN BIT(1)
-
 
 #define TC358775_VPCTRL_VSDELAY__MASK	0x3FF00000
 #define TC358775_VPCTRL_VSDELAY__SHIFT	20
@@ -250,7 +267,7 @@ struct tc_data {
 	struct regulator	*vddio;
 	struct gpio_desc	*reset_gpio;
 	struct gpio_desc	*stby_gpio;
-	bool                      dual_link; /* single-link or dual-link */
+	bool                    dual_link; /* single-link or dual-link */
 };
 
 static inline struct tc_data *bridge_to_tc(struct drm_bridge *b)
@@ -343,9 +360,9 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	mode = &bridge->encoder->crtc->state->adjusted_mode;
 
-	hbpr = 0;
+	hbpr = mode->htotal - mode->hsync_end;
 	hpw  = mode->hsync_end - mode->hsync_start;
-	vbpr = 0;
+	vbpr = mode->vtotal - mode->vsync_end;
 	vpw  = mode->vsync_end - mode->vsync_start;
 
 	htime1 = (hbpr << 16) + hpw;
@@ -367,7 +384,8 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	dev_info(tc->dev, "DSI2LVDS Chip ID.%02x Revision ID. %02x\n",
 			(val>>8)&0xFF, val&0xFF);
 
-	d2l_write(tc, SYSRST, 0x000000FF);
+	d2l_write(tc, SYSRST, SYS_RST_REG | SYS_RST_DSIRX | SYS_RST_BM |
+			SYS_RST_LCD | SYS_RST_I2CM | SYS_RST_I2CS);
 	usleep_range(30000, 40000);
 
 	d2l_write(tc, PPI_TX_RX_TA, TTA_GET | TTA_SURE);
@@ -381,13 +399,12 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	d2l_write(tc, PPI_LANEENABLE, val);
 	d2l_write(tc, DSI_LANEENABLE, val);
 
-	d2l_write(tc, PPI_STARTPPI, 0x00000001);
-	d2l_write(tc, DSI_STARTDSI, 0x00000001);
+	d2l_write(tc, PPI_STARTPPI, PPI_START_FUNCTION);
+	d2l_write(tc, DSI_STARTDSI, DSI_RX_START);
 
 	val = TC358775_VPCTRL_VSDELAY(21); //TODO : to set the dynamic value
 
 	bus_formats = connector->display_info.bus_formats[0];
-
 	dev_dbg(tc->dev, "bus_formats : %04x\n", bus_formats);
 
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG
@@ -406,9 +423,9 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	d2l_write(tc, HTIM2, htime2);
 	d2l_write(tc, VTIM2, vtime2);
 
-	d2l_write(tc, VFUEN, 0x00000001);
-	d2l_write(tc, SYSRST, 0x00000004);
-	d2l_write(tc, LVPHY0, 0x00040006);
+	d2l_write(tc, VFUEN, VFUEN_EN);
+	d2l_write(tc, SYSRST, SYS_RST_LCD);
+	d2l_write(tc, LVPHY0, LV_PHY0_PRBS_ON(4) | LV_PHY0_ND(6));
 
 	/* default jeida-24 */
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG) {
@@ -433,7 +450,7 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_L0));
 	}
 
-	d2l_write(tc, VFUEN, 0x00000001);
+	d2l_write(tc, VFUEN, VFUEN_EN);
 
 	val = TC358775_LVCFG_PCLKDIV(DIVIDE_BY_3) | LVCFG_LVEN_BIT;
 	if (!tc->dual_link) {
