@@ -317,6 +317,19 @@ static int d2l_write(struct tc_data *tc, u16 reg, u32 data)
 	return ret;
 }
 
+/* helper function to access bus_formats */
+static struct drm_connector *get_connector(struct drm_encoder *encoder)
+{
+	struct drm_device *dev = encoder->dev;
+	struct drm_connector *connector;
+
+	list_for_each_entry(connector, &dev->mode_config.connector_list, head)
+		if (connector->encoder == encoder)
+			return connector;
+
+	return NULL;
+}
+
 static void tc_bridge_enable(struct drm_bridge *bridge)
 {
 	struct tc_data *tc = bridge_to_tc(bridge);
@@ -326,6 +339,7 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	u32 val = 0;
 	u16 bus_formats;
 	struct drm_display_mode *mode;
+	struct drm_connector *connector = get_connector(bridge->encoder);
 
 	mode = &bridge->encoder->crtc->state->adjusted_mode;
 
@@ -372,8 +386,9 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	val = TC358775_VPCTRL_VSDELAY(21); //TODO : to set the dynamic value
 
-//bus_formats = tc->connector.display_info.bus_formats[0];
-	bus_formats = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG;
+	bus_formats = connector->display_info.bus_formats[0];
+
+	dev_dbg(tc->dev, "bus_formats : %04x\n", bus_formats);
 
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG
 		|| bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) {
