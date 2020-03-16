@@ -274,8 +274,6 @@
 				vddio-supply = <&pm8916_l6>;
 
 				tc,dsi-lanes = <4>;
-				tc,data-format = <1>;
-				tc,dual-link = <0>;
 
 				stby-gpio = <&msmgpio 99 GPIO_ACTIVE_LOW>;
 				reset-gpio = <&msmgpio 72 GPIO_ACTIVE_LOW>;
@@ -294,9 +292,17 @@
 					port@1 {
 						reg = <1>;
 						lvds0_out: endpoint {
-							remote-endpoint = <&panel_in0>;
+							remote-endpoint = <&panel_in0_vesa>;
 						};
 					};
+#ifdef DUAL 
+					port@2 {
+						reg = <2>;
+						lvds1_out: endpoint {
+							remote-endpoint = <&panel_in1_dual>;
+						};
+					};
+#endif
 				};
 			};
 		};
@@ -309,8 +315,7 @@
                         width-mm = <223>;
                         height-mm = <125>;
 
-                        data-mapping = "jeida-24";
-                        //data-mapping = "jeida-18";
+                        data-mapping = "jeida-18";
 
                         panel-timing {
                                 /* 1366x768 @60Hz */
@@ -341,7 +346,6 @@
                         height-mm = <86>;
 
                         data-mapping = "vesa-24";
-                        //data-mapping = "jeida-18";
 
                         panel-timing {
                                 /* 800x480 @60Hz */
@@ -357,12 +361,54 @@
                         };
 
                         port {
-                                panel_in0_testing: endpoint {
+                                panel_in0_vesa: endpoint {
                                         remote-endpoint = <&lvds0_out>;
                                 };
                         };
                 };
+#ifdef DUAL
+		dual_link: panel-lvds {
+			compatible = "advantech,idk-2121wr", "panel-lvds";
 
+			width-mm = <885>;
+			height-mm = <498>;
+
+                        data-mapping = "jeida-24";
+
+			panel-timing {
+				clock-frequency = <149674680>;
+				hactive = <1920>;
+				vactive = <1080>;
+				hsync-len = <96>;
+				hfront-porch = <64>;
+				hback-porch = <194>;
+				vfront-porch = <2>;
+				vback-porch = <12>;
+				vsync-len = <3>;
+	                };
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dual-lvds-odd-pixels;
+					panel_in0_dual: endpoint {
+						remote-endpoint = <&lvds0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dual-lvds-even-pixels;
+					panel_in1_dual: endpoint {
+						remote-endpoint = <&lvds1_out>;
+					};
+				};
+			};
+		};
+#endif
 		i2c@78ba000 {
 		/* On Low speed expansion */
 			label = "LS-I2C1";

@@ -91,7 +91,6 @@ examples:
 		reg = <0x0f>;
 
 		tc,dsi-lanes = <4>;
-		tc,dual-link = <0>;
 
 		vdd-supply = <&pm8916_l2>;
 		vddio-supply = <&pm8916_l6>;
