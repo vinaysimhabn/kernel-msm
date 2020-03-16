@@ -200,6 +200,7 @@ enum {
 
 #define DSI_CLEN_BIT		BIT(0)
 #define DIVIDE_BY_3		3 /* PCLK=DCLK/3 */
+#define DIVIDE_BY_6		6 /* PCLK=DCLK/6 */
 #define LVCFG_LVEN_BIT		BIT(0)
 
 #define L0EN BIT(1)
@@ -452,12 +453,12 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 
 	d2l_write(tc, VFUEN, VFUEN_EN);
 
-	val = TC358775_LVCFG_PCLKDIV(DIVIDE_BY_3) | LVCFG_LVEN_BIT;
-	if (!tc->dual_link) {
-		dev_dbg(tc->dev, "LVDLINK operating in %s-link mode\n",
-		tc->dual_link ? "dual" : "single");
+	val = LVCFG_LVEN_BIT;
+	if (tc->dual_link) {
 		val |= TC358775_LVCFG_LVDLINK(1);
-	}
+		val |= TC358775_LVCFG_PCLKDIV(DIVIDE_BY_6);
+	} else
+		val |= TC358775_LVCFG_PCLKDIV(DIVIDE_BY_3);
 
 	d2l_write(tc, LVCFG, val);
 }
