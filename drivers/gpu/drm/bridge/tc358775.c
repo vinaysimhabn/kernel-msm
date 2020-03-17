@@ -478,16 +478,39 @@ static int tc_mode_valid(struct drm_bridge *bridge,
 
 int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 {
-	u32 num_lanes;
 	struct device_node *endpoint;
+	struct device_node *parent;
 	struct device_node *remote;
+	struct property *prop;
+	int len;
 
-	of_property_read_u32(np, "tc,dsi-lanes", &num_lanes);
+	endpoint = of_graph_get_endpoint_by_regs(tc->dev->of_node,
+						 TC358775_DSI_IN, -1);
+	if (endpoint) {
+		/* dsi0_out node */
+		parent = of_graph_get_remote_port_parent(endpoint);
+		of_node_put(endpoint);
+		if (parent) {
+			/* dsi0 port 1 */
+			endpoint = of_graph_get_endpoint_by_regs(parent, 1, -1);
+			of_node_put(parent);
+			if (endpoint) {
+				prop = of_find_property(endpoint, "data-lanes",
+							&len);
+				of_node_put(endpoint);
+				if (!prop) {
+					dev_err(tc->dev,
+						"failed to find data lane\n");
+					return -EPROBE_DEFER;
+				}
+			}
+		}
+	}
 
-	if (num_lanes < 1 || num_lanes > 4)
+	tc->num_dsi_lanes = len / sizeof(u32);
+
+	if (tc->num_dsi_lanes < 1 || tc->num_dsi_lanes > 4)
 		return -EINVAL;
-
-	tc->num_dsi_lanes = num_lanes;
 
 	tc->host_node = of_graph_get_remote_node(np, 0, 0);
 	if (!tc->host_node)
@@ -508,6 +531,7 @@ int tc358775_parse_dt(struct device_node *np, struct tc_data *tc)
 		}
 	}
 
+	dev_dbg(tc->dev, "no.of dsi lanes: %d\n", tc->num_dsi_lanes);
 	dev_dbg(tc->dev, "operating in %s-link mode\n",
 		tc->dual_link ? "dual" : "single");
 

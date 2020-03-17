@@ -273,8 +273,6 @@
 				vdd-supply = <&pm8916_l2>;
 				vddio-supply = <&pm8916_l6>;
 
-				tc,dsi-lanes = <4>;
-
 				stby-gpio = <&msmgpio 99 GPIO_ACTIVE_LOW>;
 				reset-gpio = <&msmgpio 72 GPIO_ACTIVE_LOW>;
 
