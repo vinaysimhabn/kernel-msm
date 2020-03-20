@@ -305,7 +305,8 @@
 			};
 		};
 
-		panel: auo,b101xtn01 {
+#ifdef JEIDA
+		lvds-out2 {
                         status = "okay";
 			compatible = "auo,b101xtn01", "panel-lvds";
                         power-supply = <&pm8916_l14>;
@@ -335,7 +336,8 @@
                         };
                 };
 
-		panel2: eppendorf {
+#endif
+		lvds-out {
                         status = "okay";
 			compatible = "innolux,at070tn92", "panel-lvds";
                         power-supply = <&pm8916_l14>;
@@ -365,7 +367,7 @@
                         };
                 };
 #ifdef DUAL
-		dual_link: panel-lvds {
+		dual-lvds-out {
 			compatible = "advantech,idk-2121wr", "panel-lvds";
 
 			width-mm = <885>;
