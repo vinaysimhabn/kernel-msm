@@ -221,7 +221,7 @@
 			status = "okay";
 
 			adv_bridge: bridge@39 {
-				status = "okay";
+				status = "disabled";
 
 				compatible = "adi,adv7533";
 				reg = <0x39>;
@@ -263,8 +263,152 @@
 					};
 				};
 			};
+
+			tc_bridge: bridge@f {
+				status = "okay";
+
+				compatible = "toshiba,tc358775";
+				reg = <0x0f>;
+
+				vdd-supply = <&pm8916_l2>;
+				vddio-supply = <&pm8916_l6>;
+
+				stby-gpios = <&msmgpio 99 GPIO_ACTIVE_LOW>;
+				reset-gpios = <&msmgpio 72 GPIO_ACTIVE_LOW>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						d2l_in: endpoint {
+							remote-endpoint = <&dsi0_out>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						lvds0_out: endpoint {
+							remote-endpoint = <&panel_in0_vesa>;
+						};
+					};
+#ifdef DUAL 
+					port@2 {
+						reg = <2>;
+						lvds1_out: endpoint {
+							remote-endpoint = <&panel_in1_dual>;
+						};
+					};
+#endif
+				};
+			};
 		};
 
+#ifdef JEIDA
+		lvds-out2 {
+                        status = "okay";
+			compatible = "auo,b101xtn01", "panel-lvds";
+                        power-supply = <&pm8916_l14>;
+
+                        width-mm = <223>;
+                        height-mm = <125>;
+
+                        data-mapping = "jeida-18";
+
+                        panel-timing {
+                                /* 1366x768 @60Hz */
+                                clock-frequency = <72000000>;
+                                hactive = <1366>;
+                                vactive = <768>;
+                                hsync-len = <70>;
+                                hfront-porch = <20>;
+                                hback-porch = <0>;
+                                vsync-len = <42>;
+                                vfront-porch = <14>;
+                                vback-porch = <0>;
+                        };
+
+                        port {
+                                panel_in0: endpoint {
+                                        remote-endpoint = <&lvds0_out>;
+                                };
+                        };
+                };
+
+#endif
+		lvds-out {
+                        status = "okay";
+			compatible = "innolux,at070tn92", "panel-lvds";
+                        power-supply = <&pm8916_l14>;
+
+                        width-mm = <154>;
+                        height-mm = <86>;
+
+                        data-mapping = "vesa-24";
+
+                        panel-timing {
+                                /* 800x480 @60Hz */
+                                clock-frequency = <38390040>;
+                                hactive = <800>;
+                                vactive = <480>;
+                                hsync-len = <40>;
+                                hfront-porch = <142>;
+                                hback-porch = <32>;
+                                vsync-len = <20>;
+                                vfront-porch = <126>;
+                                vback-porch = <5>;
+                        };
+
+                        port {
+                                panel_in0_vesa: endpoint {
+                                        remote-endpoint = <&lvds0_out>;
+                                };
+                        };
+                };
+#ifdef DUAL
+		dual-lvds-out {
+			compatible = "advantech,idk-2121wr", "panel-lvds";
+
+			width-mm = <885>;
+			height-mm = <498>;
+
+                        data-mapping = "jeida-24";
+
+			panel-timing {
+				clock-frequency = <149674680>;
+				hactive = <1920>;
+				vactive = <1080>;
+				hsync-len = <96>;
+				hfront-porch = <64>;
+				hback-porch = <194>;
+				vfront-porch = <2>;
+				vback-porch = <12>;
+				vsync-len = <3>;
+	                };
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dual-lvds-odd-pixels;
+					panel_in0_dual: endpoint {
+						remote-endpoint = <&lvds0_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dual-lvds-even-pixels;
+					panel_in1_dual: endpoint {
+						remote-endpoint = <&lvds1_out>;
+					};
+				};
+			};
+		};
+#endif
 		i2c@78ba000 {
 		/* On Low speed expansion */
 			label = "LS-I2C1";
@@ -333,6 +477,13 @@
 				linux,default-trigger = "bluetooth-power";
 				default-state = "off";
 			};
+
+			led@7 {
+				label = "apq8016-sbc:white:backlight";
+				gpios = <&pm8916_mpps 4 GPIO_ACTIVE_HIGH>;
+				linux,default-trigger = "backlight";
+				default-state = "on";
+			};
 		};
 
 		sdhci@7824000 {
@@ -396,7 +547,8 @@
 				ports {
 					port@1 {
 						endpoint {
-							remote-endpoint = <&adv7533_in>;
+							remote-endpoint = <&d2l_in>;
+							//remote-endpoint = <&adv7533_in>;
 							data-lanes = <0 1 2 3>;
 						};
 					};
