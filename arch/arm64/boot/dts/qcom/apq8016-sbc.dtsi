@@ -245,7 +245,8 @@
 			status = "okay";
 
 			adv_bridge: bridge@39 {
-				status = "okay";
+				//status = "okay";
+				status = "disabled";
 
 				compatible = "adi,adv7533";
 				reg = <0x39>;
@@ -287,7 +288,69 @@
 					};
 				};
 			};
+
+			tc_bridge: bridge@f {
+                                status = "okay";
+
+                                compatible = "toshiba,tc358775";
+                                reg = <0x0f>;
+
+                                vdd-supply = <&pm8916_l2>;
+                                vddio-supply = <&pm8916_l6>;
+
+                                stby-gpios = <&msmgpio 99 GPIO_ACTIVE_LOW>;
+                                reset-gpios = <&msmgpio 72 GPIO_ACTIVE_LOW>;
+
+                                ports {
+                                        #address-cells = <1>;
+                                        #size-cells = <0>;
+
+                                        port@0 {
+                                                reg = <0>;
+                                                d2l_in: endpoint {
+                                                        remote-endpoint = <&dsi0_out>;
+                                                };
+                                        };
+
+                                        port@1 {
+                                                reg = <1>;
+                                                lvds0_out: endpoint {
+                                                        remote-endpoint = <&panel_in0_vesa>;
+                                                };
+                                        };
+                                };
+                        };
 		};
+
+		lvds-out {
+                        status = "okay";
+                        compatible = "innolux,at070tn92", "panel-lvds";
+                        power-supply = <&pm8916_l14>;
+
+                        width-mm = <154>;
+                        height-mm = <86>;
+
+                        data-mapping = "vesa-24";
+
+                        panel-timing {
+                                /* 800x480 @60Hz */
+                                clock-frequency = <38390040>;
+                                hactive = <800>;
+                                vactive = <480>;
+                                hsync-len = <40>;
+                                hfront-porch = <142>;
+                                hback-porch = <32>;
+                                vsync-len = <20>;
+                                vfront-porch = <126>;
+                                vback-porch = <5>;
+                        };
+
+                        port {
+                                panel_in0_vesa: endpoint {
+                                        remote-endpoint = <&lvds0_out>;
+                                };
+                        };
+                };
 
 		i2c@78ba000 {
 		/* On Low speed expansion */
@@ -357,6 +420,13 @@
 				linux,default-trigger = "bluetooth-power";
 				default-state = "off";
 			};
+
+			led@7 {
+				label = "apq8016-sbc:white:backlight";
+				gpios = <&pm8916_mpps 4 GPIO_ACTIVE_HIGH>;
+				linux,default-trigger = "backlight";
+				default-state = "on";
+			};
 		};
 
 		sdhci@7824000 {
@@ -420,7 +490,8 @@
 				ports {
 					port@1 {
 						endpoint {
-							remote-endpoint = <&adv7533_in>;
+							remote-endpoint = <&d2l_in>;
+							//remote-endpoint = <&adv7533_in>;
 							data-lanes = <0 1 2 3>;
 						};
 					};
