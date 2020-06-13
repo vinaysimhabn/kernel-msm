@@ -243,6 +243,7 @@
 		/* On High speed expansion */
 			label = "HS-I2C2";
 			status = "okay";
+			clock-frequency = <400000>;
 
 			adv_bridge: bridge@39 {
 				//status = "okay";

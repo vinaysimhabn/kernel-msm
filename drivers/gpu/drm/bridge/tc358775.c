@@ -252,7 +252,6 @@ enum tc358775_ports {
 
 struct tc_data {
 	struct i2c_client	*i2c;
-
 	struct device		*dev;
 
 	struct drm_bridge	bridge;
@@ -281,17 +280,13 @@ static void tc_bridge_pre_enable(struct drm_bridge *bridge)
 	int ret;
 
 	ret = regulator_enable(tc->vddio);
-	if (ret < 0) {
+	if (ret < 0)
 		dev_err(dev, "regulator vddio enable failed, %d\n", ret);
-		return;
-	}
 	usleep_range(10000, 11000);
 
 	ret = regulator_enable(tc->vdd);
-	if (ret < 0) {
+	if (ret < 0)
 		dev_err(dev, "regulator vdd enable failed, %d\n", ret);
-		return;
-	}
 	usleep_range(10000, 11000);
 
 	gpiod_set_value(tc->stby_gpio, 0);
@@ -324,19 +319,18 @@ static void tc_bridge_post_disable(struct drm_bridge *bridge)
 	usleep_range(10, 20);
 }
 
-
-static u32 d2l_read_i2c(struct tc_data *tc, u16 reg)
+static u32 d2l_read(struct i2c_client *i2c, u16 reg)
 {
 	int ret;
 	u8 val[4];
 	u8 addr[] = {(reg >> 8) & 0xff, reg & 0xff};
 	u32 value;
 
-	ret = i2c_master_send(tc->i2c, addr, sizeof(reg));
+	ret = i2c_master_send(i2c, addr, sizeof(reg));
 	if (ret < 0)
 		goto fail;
 
-	ret = i2c_master_recv(tc->i2c, val, sizeof(value));
+	ret = i2c_master_recv(i2c, val, sizeof(value));
 	if (ret < 0)
 		goto fail;
 
@@ -347,12 +341,12 @@ static u32 d2l_read_i2c(struct tc_data *tc, u16 reg)
 	return value;
 
 fail:
-	dev_err(tc->dev, "Error %d reading from subaddress 0x%x\n",
-			ret, reg);
+	dev_err(&i2c->dev, "Error %d reading from subaddress 0x%x\n",
+		ret, reg);
 	return 0;
 }
 
-static void d2l_write(struct tc_data *tc, u16 reg, u32 val)
+static void d2l_write(struct i2c_client *i2c, u16 reg, u32 val)
 {
 	u8 buf[6];
 	int ret;
@@ -364,12 +358,10 @@ static void d2l_write(struct tc_data *tc, u16 reg, u32 val)
 	buf[4] = (val >> 16) & 0xFF;
 	buf[5] = (val >> 24) & 0xFF;
 
-	ret = i2c_master_send(tc->i2c, buf, ARRAY_SIZE(buf));
+	ret = i2c_master_send(i2c, buf, ARRAY_SIZE(buf));
 	if (ret < 0)
-		pr_debug("Error %d writing to subaddress 0x%x\n",
+		dev_err(&i2c->dev, "Error %d writing to subaddress 0x%x\n",
 			ret, reg);
-
-	d2l_read_i2c(tc, reg);
 }
 
 /* helper function to access bus_formats */
@@ -413,91 +405,92 @@ static void tc_bridge_enable(struct drm_bridge *bridge)
 	htime2 = (hfpr << 16) + hsize;
 	vtime2 = (vfpr << 16) + vsize;
 
-	val = d2l_read_i2c(tc, IDREG);
+	val = d2l_read(tc->i2c, IDREG);
 
 	dev_info(tc->dev, "DSI2LVDS Chip ID.%02x Revision ID. %02x **\n",
-			(val>>8)&0xFF, val&0xFF);
+		 (val >> 8) & 0xFF, val & 0xFF);
 
-	d2l_write(tc, SYSRST, SYS_RST_REG | SYS_RST_DSIRX | SYS_RST_BM |
-			SYS_RST_LCD | SYS_RST_I2CM | SYS_RST_I2CS);
+	d2l_write(tc->i2c, SYSRST, SYS_RST_REG | SYS_RST_DSIRX | SYS_RST_BM |
+		  SYS_RST_LCD | SYS_RST_I2CM | SYS_RST_I2CS);
 	usleep_range(30000, 40000);
 
-	d2l_write(tc, PPI_TX_RX_TA, TTA_GET | TTA_SURE);
-	d2l_write(tc, PPI_LPTXTIMECNT, LPX_PERIOD);
-	d2l_write(tc, PPI_D0S_CLRSIPOCOUNT, 3);
-	d2l_write(tc, PPI_D1S_CLRSIPOCOUNT, 3);
-	d2l_write(tc, PPI_D2S_CLRSIPOCOUNT, 3);
-	d2l_write(tc, PPI_D3S_CLRSIPOCOUNT, 3);
+	d2l_write(tc->i2c, PPI_TX_RX_TA, TTA_GET | TTA_SURE);
+	d2l_write(tc->i2c, PPI_LPTXTIMECNT, LPX_PERIOD);
+	d2l_write(tc->i2c, PPI_D0S_CLRSIPOCOUNT, 3);
+	d2l_write(tc->i2c, PPI_D1S_CLRSIPOCOUNT, 3);
+	d2l_write(tc->i2c, PPI_D2S_CLRSIPOCOUNT, 3);
+	d2l_write(tc->i2c, PPI_D3S_CLRSIPOCOUNT, 3);
 
 	val = ((L0EN << tc->num_dsi_lanes) - L0EN) | DSI_CLEN_BIT;
-	d2l_write(tc, PPI_LANEENABLE, val);
-	d2l_write(tc, DSI_LANEENABLE, val);
+	d2l_write(tc->i2c, PPI_LANEENABLE, val);
+	d2l_write(tc->i2c, DSI_LANEENABLE, val);
 
-	d2l_write(tc, PPI_STARTPPI, PPI_START_FUNCTION);
-	d2l_write(tc, DSI_STARTDSI, DSI_RX_START);
+	d2l_write(tc->i2c, PPI_STARTPPI, PPI_START_FUNCTION);
+	d2l_write(tc->i2c, DSI_STARTDSI, DSI_RX_START);
 
 	val = TC358775_VPCTRL_VSDELAY(21); //TODO : to set the dynamic value
 
 	bus_formats = connector->display_info.bus_formats[0];
 	dev_dbg(tc->dev, "bus_formats : %04x\n", bus_formats);
 
-	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG
-		|| bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) {
+	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG ||
+	    bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) {
 		/* RGB888 */
 		val |= TC358775_VPCTRL_OPXLFMT(1);
-		d2l_write(tc, VPCTRL, val);
+		d2l_write(tc->i2c, VPCTRL, val);
 	} else {
 		/* RGB666 */
 		val |= TC358775_VPCTRL_MSF(1);
-		d2l_write(tc, VPCTRL, val);
+		d2l_write(tc->i2c, VPCTRL, val);
 	}
 
-	d2l_write(tc, HTIM1, htime1);
-	d2l_write(tc, VTIM1, vtime1);
-	d2l_write(tc, HTIM2, htime2);
-	d2l_write(tc, VTIM2, vtime2);
+	d2l_write(tc->i2c, HTIM1, htime1);
+	d2l_write(tc->i2c, VTIM1, vtime1);
+	d2l_write(tc->i2c, HTIM2, htime2);
+	d2l_write(tc->i2c, VTIM2, vtime2);
 
-	d2l_write(tc, VFUEN, VFUEN_EN);
-	d2l_write(tc, SYSRST, SYS_RST_LCD);
-	d2l_write(tc, LVPHY0, LV_PHY0_PRBS_ON(4) | LV_PHY0_ND(6));
+	d2l_write(tc->i2c, VFUEN, VFUEN_EN);
+	d2l_write(tc->i2c, SYSRST, SYS_RST_LCD);
+	d2l_write(tc->i2c, LVPHY0, LV_PHY0_PRBS_ON(4) | LV_PHY0_ND(6));
 
 	/* default jeida-24 */
 	if (bus_formats == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG) {
 		/* vesa-24 */
-		d2l_write(tc, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
-		d2l_write(tc, LV_MX0407, LV_MX(LVI_R4, LVI_R7, LVI_R5, LVI_G0));
-		d2l_write(tc, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_G6, LVI_G7));
-		d2l_write(tc, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
-		d2l_write(tc, LV_MX1619, LV_MX(LVI_B6, LVI_B7, LVI_B1, LVI_B2));
-		d2l_write(tc, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
-		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_R6));
+		d2l_write(tc->i2c, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
+		d2l_write(tc->i2c, LV_MX0407, LV_MX(LVI_R4, LVI_R7, LVI_R5, LVI_G0));
+		d2l_write(tc->i2c, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_G6, LVI_G7));
+		d2l_write(tc->i2c, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
+		d2l_write(tc->i2c, LV_MX1619, LV_MX(LVI_B6, LVI_B7, LVI_B1, LVI_B2));
+		d2l_write(tc->i2c, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
+		d2l_write(tc->i2c, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_R6));
 	}
 
 	if (bus_formats == MEDIA_BUS_FMT_RGB666_1X7X3_SPWG) {
 		/* jeida-18 */
-		d2l_write(tc, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
-		d2l_write(tc, LV_MX0407, LV_MX(LVI_R4, LVI_L0, LVI_R5, LVI_G0));
-		d2l_write(tc, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_L0, LVI_L0));
-		d2l_write(tc, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
-		d2l_write(tc, LV_MX1619, LV_MX(LVI_L0, LVI_L0, LVI_B1, LVI_B2));
-		d2l_write(tc, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
-		d2l_write(tc, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_L0));
+		d2l_write(tc->i2c, LV_MX0003, LV_MX(LVI_R0, LVI_R1, LVI_R2, LVI_R3));
+		d2l_write(tc->i2c, LV_MX0407, LV_MX(LVI_R4, LVI_L0, LVI_R5, LVI_G0));
+		d2l_write(tc->i2c, LV_MX0811, LV_MX(LVI_G1, LVI_G2, LVI_L0, LVI_L0));
+		d2l_write(tc->i2c, LV_MX1215, LV_MX(LVI_G3, LVI_G4, LVI_G5, LVI_B0));
+		d2l_write(tc->i2c, LV_MX1619, LV_MX(LVI_L0, LVI_L0, LVI_B1, LVI_B2));
+		d2l_write(tc->i2c, LV_MX2023, LV_MX(LVI_B3, LVI_B4, LVI_B5, LVI_L0));
+		d2l_write(tc->i2c, LV_MX2427, LV_MX(LVI_HS, LVI_VS, LVI_DE, LVI_L0));
 	}
 
-	d2l_write(tc, VFUEN, VFUEN_EN);
+	d2l_write(tc->i2c, VFUEN, VFUEN_EN);
 
 	val = LVCFG_LVEN_BIT;
 	if (tc->dual_link) {
 		val |= TC358775_LVCFG_LVDLINK(1);
 		val |= TC358775_LVCFG_PCLKDIV(DIVIDE_BY_6);
-	} else
+	} else {
 		val |= TC358775_LVCFG_PCLKDIV(DIVIDE_BY_3);
+	}
 
-	d2l_write(tc, LVCFG, val);
+	d2l_write(tc->i2c, LVCFG, val);
 }
 
 static int tc_mode_valid(struct drm_bridge *bridge,
-			const struct drm_display_mode *mode)
+			 const struct drm_display_mode *mode)
 {
 	struct tc_data *tc = bridge_to_tc(bridge);
 
@@ -642,7 +635,7 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	tc->i2c = client;
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, TC358775_LVDS_OUT0,
-						0, &panel, NULL);
+					  0, &panel, NULL);
 	if (ret < 0)
 		return ret;
 	if (!panel)
