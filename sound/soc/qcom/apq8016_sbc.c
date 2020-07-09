@@ -31,6 +31,10 @@ struct apq8016_sbc_data {
 #define	SPKR_CTL_PRI_WS_SLAVE_SEL_11	(BIT(17) | BIT(16))
 #define DEFAULT_MCLK_RATE		9600000
 
+#define SPKR_CTL_SCLK_EN		BIT(2)
+#define SPKR_CTL_DATA1_EN		BIT(3)
+#define SPKR_CTL_DATA0_EN		BIT(4)
+
 static int apq8016_sbc_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
@@ -42,7 +46,9 @@ static int apq8016_sbc_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	switch (cpu_dai->id) {
 	case MI2S_PRIMARY:
-		writel(readl(pdata->spkr_iomux) | SPKR_CTL_PRI_WS_SLAVE_SEL_11,
+		writel(readl(pdata->spkr_iomux) | SPKR_CTL_PRI_WS_SLAVE_SEL_11 |
+				SPKR_CTL_SCLK_EN | SPKR_CTL_DATA0_EN |
+				SPKR_CTL_DATA1_EN,
 			pdata->spkr_iomux);
 		break;
 
