@@ -31,6 +31,7 @@
 struct lt9611uxc {
 	struct device *dev;
 	struct drm_bridge bridge;
+	struct drm_connector connector;
 
 	struct regmap *regmap;
 	/* Protects all accesses to registers by stopping the on-chip MCU */
@@ -103,6 +104,11 @@ static struct lt9611uxc_mode lt9611uxc_modes[] = {
 static struct lt9611uxc *bridge_to_lt9611uxc(struct drm_bridge *bridge)
 {
 	return container_of(bridge, struct lt9611uxc, bridge);
+}
+
+static struct lt9611uxc *connector_to_lt9611uxc(struct drm_connector *connector)
+{
+	return container_of(connector, struct lt9611uxc, connector);
 }
 
 static void lt9611uxc_lock(struct lt9611uxc *lt9611uxc)
@@ -246,6 +252,75 @@ static struct mipi_dsi_device *lt9611uxc_attach_dsi(struct lt9611uxc *lt9611uxc,
 	return dsi;
 }
 
+static int lt9611uxc_connector_get_modes(struct drm_connector *connector)
+{
+	struct lt9611uxc *lt9611uxc = connector_to_lt9611uxc(connector);
+	unsigned int count;
+	struct edid *edid;
+
+	if (lt9611uxc->bridge.ops & DRM_BRIDGE_OP_MODES)
+		return lt9611uxc->bridge.funcs->get_modes(&lt9611uxc->bridge, connector);
+
+	edid = lt9611uxc->bridge.funcs->get_edid(&lt9611uxc->bridge, connector);
+	drm_connector_update_edid_property(connector, edid);
+	count = drm_add_edid_modes(connector, edid);
+	kfree(edid);
+
+	return count;
+}
+
+static enum drm_connector_status lt9611uxc_connector_detect(struct drm_connector *connector,
+							    bool force)
+{
+	struct lt9611uxc *lt9611uxc = connector_to_lt9611uxc(connector);
+
+	return lt9611uxc->bridge.funcs->detect(&lt9611uxc->bridge);
+}
+
+static enum drm_mode_status lt9611uxc_connector_mode_valid(struct drm_connector *connector,
+							   struct drm_display_mode *mode)
+{
+	struct lt9611uxc_mode *lt9611uxc_mode = lt9611uxc_find_mode(mode);
+
+	return lt9611uxc_mode ? MODE_OK : MODE_BAD;
+}
+
+static const struct drm_connector_helper_funcs lt9611uxc_bridge_connector_helper_funcs = {
+	.get_modes = lt9611uxc_connector_get_modes,
+	.mode_valid = lt9611uxc_connector_mode_valid,
+};
+
+static const struct drm_connector_funcs lt9611uxc_bridge_connector_funcs = {
+	.fill_modes = drm_helper_probe_single_connector_modes,
+	.detect = lt9611uxc_connector_detect,
+	.destroy = drm_connector_cleanup,
+	.reset = drm_atomic_helper_connector_reset,
+	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
+	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
+};
+
+static int lt9611uxc_connector_init(struct drm_bridge *bridge, struct lt9611uxc *lt9611uxc)
+{
+	int ret;
+
+	if (!bridge->encoder) {
+		DRM_ERROR("Parent encoder object not found");
+		return -ENODEV;
+	}
+
+	drm_connector_helper_add(&lt9611uxc->connector,
+				 &lt9611uxc_bridge_connector_helper_funcs);
+	ret = drm_connector_init(bridge->dev, &lt9611uxc->connector,
+				 &lt9611uxc_bridge_connector_funcs,
+				 DRM_MODE_CONNECTOR_HDMIA);
+	if (ret) {
+		DRM_ERROR("Failed to initialize connector with drm\n");
+		return ret;
+	}
+
+	return drm_connector_attach_encoder(&lt9611uxc->connector, bridge->encoder);
+}
+
 static void lt9611uxc_bridge_detach(struct drm_bridge *bridge)
 {
 	struct lt9611uxc *lt9611uxc = bridge_to_lt9611uxc(bridge);
@@ -266,8 +341,9 @@ static int lt9611uxc_bridge_attach(struct drm_bridge *bridge,
 	int ret;
 
 	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR)) {
-		dev_err(lt9611uxc->dev, "This bridge driver does not support providing connector!");
-		return -EINVAL;
+		ret = lt9611uxc_connector_init(bridge, lt9611uxc);
+		if (ret < 0)
+			return ret;
 	}
 
 	/* Attach primary DSI */
