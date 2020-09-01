@@ -371,7 +371,6 @@ err_unregister_dsi0:
 
 static enum drm_mode_status
 lt9611uxc_bridge_mode_valid(struct drm_bridge *bridge,
-			    const struct drm_display_info *info,
 			    const struct drm_display_mode *mode)
 {
 	struct lt9611uxc_mode *lt9611uxc_mode;
