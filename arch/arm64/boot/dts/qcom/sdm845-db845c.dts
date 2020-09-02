@@ -4,7 +4,8 @@
  */
 
 /dts-v1/;
-
+#define DSI2
+#define TIMINGS
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
@@ -363,7 +364,7 @@
 	status = "okay";
 	vdda-supply = <&vreg_l26a_1p2>;
 
-#if 0
+#ifdef DSI2
 	qcom,dual-dsi-mode;
 	qcom,master-dsi;
 #endif
@@ -383,7 +384,7 @@
 	vdds-supply = <&vreg_l1a_0p875>;
 };
 
-#if 0
+#ifdef DSI2
 &dsi1 {
 	status = "okay";
 	vdda-supply = <&vreg_l26a_1p2>;
@@ -419,25 +420,43 @@
 	};
 };
 
-&i2c10 {
+&i2c5 {
 	status = "okay";
 	clock-frequency = <400000>;
 
-	lt9611_codec: hdmi-bridge@3b {
-		compatible = "lontium,lt9611";
-		reg = <0x3b>;
+	lt9611_codec: hdmi-bridge@2b {
+		compatible = "lontium,lt9611uxc";
+//		status = "disabled";
+		reg = <0x2b>;
 		#sound-dai-cells = <1>;
 
-		interrupts-extended = <&tlmm 84 IRQ_TYPE_EDGE_FALLING>;
+		interrupts-extended = <&tlmm 125 IRQ_TYPE_EDGE_FALLING>;
 
-		reset-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
-
+		reset-gpios = <&tlmm 87 GPIO_ACTIVE_LOW>;
+	
 		vdd-supply = <&lt9611_1v8>;
 		vcc-supply = <&lt9611_3v3>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&lt9611_irq_pin>, <&dsi_sw_sel>;
-
+#ifdef TIMINGS
+		display-timings {
+		native-mode = <&timing0>;
+		timing0: 1080p60 {
+			/* 1920x1080p60 */
+			clock-frequency = <148000000>;
+			hactive = <1920>;
+			vactive = <1080>;
+			hfront-porch = <88>;
+			hback-porch = <148>;
+			hsync-len = <44>;
+			vback-porch = <36>;
+			vfront-porch = <4>;
+			vsync-len = <5>;
+	//		hsync-active = <1>;
+			};
+		};
+#endif
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -445,28 +464,26 @@
 			port@0 {
 				reg = <0>;
 
+				lt9611_a: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+#ifdef DSI2
+			port@1 {
+				reg = <1>;
+				lt9611_b: endpoint {
+					remote-endpoint = <&dsi1_out>;
+				};
+			};
+
+#endif
+			port@2 {
+				reg = <2>;
 				lt9611_out: endpoint {
 					remote-endpoint = <&hdmi_con>;
 				};
 			};
 
-			port@1 {
-				reg = <1>;
-
-				lt9611_a: endpoint {
-					remote-endpoint = <&dsi0_out>;
-				};
-			};
-
-#if 0
-			port@2 {
-				reg = <2>;
-
-				lt9611_b: endpoint {
-					remote-endpoint = <&dsi1_out>;
-				};
-			};
-#endif
 		};
 	};
 };
@@ -713,7 +730,7 @@
 	};
 
 	lt9611_irq_pin: lt9611-irq {
-		pins = "gpio84";
+		pins = "gpio125";
 		function = "gpio";
 		bias-disable;
 	};
@@ -934,6 +951,7 @@
 	swm: swm@c85 {
 		left_spkr: wsa8810-left{
 			compatible = "sdw10217201000";
+			status = "disabled";
 			reg = <0 1>;
 			powerdown-gpios = <&wcdgpio 2 GPIO_ACTIVE_HIGH>;
 			#thermal-sensor-cells = <0>;
@@ -943,6 +961,7 @@
 
 		right_spkr: wsa8810-right{
 			compatible = "sdw10217201000";
+			status = "disabled";
 			powerdown-gpios = <&wcdgpio 2 GPIO_ACTIVE_HIGH>;
 			reg = <0 2>;
 			#thermal-sensor-cells = <0>;
@@ -975,9 +994,9 @@
 	};
 };
 
-&qup_i2c10_default {
+&qup_i2c5_default {
 	pinconf {
-		pins = "gpio55", "gpio56";
+		pins = "gpio85", "gpio86";
 		drive-strength = <2>;
 		bias-disable;
 	};
