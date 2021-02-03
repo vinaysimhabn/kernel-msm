@@ -4,7 +4,7 @@
  */
 
 /dts-v1/;
-#define DSI2
+//#define DSI2
 #define TIMINGS
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
